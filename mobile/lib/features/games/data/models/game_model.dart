@@ -10,6 +10,8 @@ class GameModel {
   final List<String> platforms;
   final String? tanggalRilis;
   final String? deskripsi;
+  final String? libraryStatus;
+  final Map<String, dynamic>? libraryEntryData;
 
   const GameModel({
     required this.id,
@@ -23,6 +25,8 @@ class GameModel {
     required this.platforms,
     this.tanggalRilis,
     this.deskripsi,
+    this.libraryStatus,
+    this.libraryEntryData,
   });
 
   factory GameModel.fromJson(Map<String, dynamic> json) {
@@ -72,6 +76,10 @@ class GameModel {
       platforms: parsedPlatforms,
       tanggalRilis: json['tanggal_rilis']?.toString() ?? json['released']?.toString(),
       deskripsi: json['deskripsi']?.toString() ?? json['description_raw']?.toString(),
+      libraryStatus: json['library_status']?.toString(),
+      libraryEntryData: json['library_entry'] is Map<String, dynamic>
+          ? json['library_entry'] as Map<String, dynamic>
+          : null,
     );
   }
 
@@ -88,6 +96,41 @@ class GameModel {
       'platforms': platforms,
       'tanggal_rilis': tanggalRilis,
       'deskripsi': deskripsi,
+      'library_status': libraryStatus,
+      'library_entry': libraryEntryData,
     };
+  }
+
+  GameModel copyWith({
+    int? id,
+    int? rawgId,
+    String? judul,
+    String? coverUrl,
+    double? rating,
+    String? genre,
+    List<String>? genres,
+    String? platform,
+    List<String>? platforms,
+    String? tanggalRilis,
+    String? deskripsi,
+    String? libraryStatus,
+    Map<String, dynamic>? libraryEntryData,
+    bool clearLibraryStatus = false,
+  }) {
+    return GameModel(
+      id: id ?? this.id,
+      rawgId: rawgId ?? this.rawgId,
+      judul: judul ?? this.judul,
+      coverUrl: coverUrl ?? this.coverUrl,
+      rating: rating ?? this.rating,
+      genre: genre ?? this.genre,
+      genres: genres ?? this.genres,
+      platform: platform ?? this.platform,
+      platforms: platforms ?? this.platforms,
+      tanggalRilis: tanggalRilis ?? this.tanggalRilis,
+      deskripsi: deskripsi ?? this.deskripsi,
+      libraryStatus: clearLibraryStatus ? null : (libraryStatus ?? this.libraryStatus),
+      libraryEntryData: clearLibraryStatus ? null : (libraryEntryData ?? this.libraryEntryData),
+    );
   }
 }

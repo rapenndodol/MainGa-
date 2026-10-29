@@ -21,4 +21,7 @@ class ApiConstants {
   static const String gamesEndpoint = '$baseUrl/games';
   static const String genresEndpoint = '$baseUrl/genres';
   static const String platformsEndpoint = '$baseUrl/platforms';
+
+  // Library Endpoints (Tahap 3)
+  static const String libraryEndpoint = '$baseUrl/library';
 }

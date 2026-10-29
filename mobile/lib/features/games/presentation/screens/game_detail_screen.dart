@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../library/data/models/library_entry_model.dart';
+import '../../../library/presentation/controllers/library_notifier.dart';
+import '../../../library/presentation/widgets/library_entry_sheet.dart';
+import '../../../library/presentation/widgets/library_status_badge.dart';
 import '../../data/datasources/game_remote_data_source.dart';
 import '../../data/models/game_model.dart';
 import '../widgets/rawg_attribution.dart';
@@ -27,9 +31,39 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
     super.initState();
     _game = widget.game;
 
-    // Jika deskripsi belum tersedia di model, fetch dari backend
-    if (_game.deskripsi == null || _game.deskripsi!.isEmpty) {
-      _fetchFullDetail();
+    // Selalu fetch detail terbaru untuk sinkronisasi deskripsi dan status library pengguna
+    _fetchFullDetail();
+
+    // Dengarkan perubahan library agar layar detail langsung ikut ter-update
+    LibraryNotifier.instance.addListener(_onLibraryChanged);
+  }
+
+  @override
+  void dispose() {
+    LibraryNotifier.instance.removeListener(_onLibraryChanged);
+    super.dispose();
+  }
+
+  void _onLibraryChanged() {
+    if (!mounted) return;
+    final notifier = LibraryNotifier.instance;
+    final gameId = _game.id > 0 ? _game.id : _game.rawgId;
+
+    if (notifier.lastModifiedGameId == gameId ||
+        notifier.lastModifiedGameId == _game.id ||
+        notifier.lastModifiedGameId == _game.rawgId) {
+      if (notifier.lastActionWasDelete) {
+        setState(() {
+          _game = _game.copyWith(clearLibraryStatus: true);
+        });
+      } else if (notifier.lastModifiedStatus != null) {
+        setState(() {
+          _game = _game.copyWith(
+            libraryStatus: notifier.lastModifiedStatus,
+            libraryEntryData: notifier.lastModifiedEntry?.toJson(),
+          );
+        });
+      }
     }
   }
 
@@ -45,6 +79,23 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
       });
     } else {
       setState(() => _isLoadingDetail = false);
+    }
+  }
+
+  Future<void> _openLibraryForm() async {
+    LibraryEntryModel? entry;
+    if (_game.libraryEntryData != null) {
+      entry = LibraryEntryModel.fromJson(_game.libraryEntryData!);
+    }
+
+    final changed = await LibraryEntrySheet.show(
+      context,
+      game: _game,
+      entry: entry,
+    );
+
+    if (changed == true) {
+      _fetchFullDetail();
     }
   }
 
@@ -194,7 +245,11 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
+
+                  // ── Tombol Status Library ───────────────────────
+                  _buildLibraryActionButton(),
+                  const SizedBox(height: 24),
 
                   // ── Section: Genre ─────────────────────────────
                   if (_game.genres.isNotEmpty || _game.genre.isNotEmpty) ...[
@@ -349,6 +404,99 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLibraryActionButton() {
+    final status = _game.libraryStatus;
+
+    if (status == null) {
+      // Game belum ada di library
+      return SizedBox(
+        width: double.infinity,
+        height: 50,
+        child: ElevatedButton.icon(
+          onPressed: _openLibraryForm,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          icon: const Icon(Icons.bookmark_add_outlined, size: 20, color: Colors.white),
+          label: const Text(
+            'Tambah ke Library',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Game sudah ada di library: tampilkan status dan tombol kelola
+    final Color statusColor = LibraryStatusHelper.getStatusColor(status);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceElevated,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: statusColor.withValues(alpha: 0.4), width: 1.2),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: _openLibraryForm,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                LibraryStatusBadge(status: status),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Tersimpan di Library',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Ketuk untuk ubah status atau catatan',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppTheme.border),
+                  ),
+                  child: const Icon(
+                    Icons.edit_outlined,
+                    size: 16,
+                    color: AppTheme.primaryAccent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
