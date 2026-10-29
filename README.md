@@ -5,12 +5,33 @@
 
 ---
 
-## 📌 Deskripsi Tahap 1 (MVP)
+## 📌 Deskripsi Tahap 2
 
-Tahap 1 mencakup fondasi arsitektur sistem dari **Minggu 1** dan fitur autentikasi dari **Minggu 2** sesuai [PRD](file:///c:/Kuliah/Semester%205/PEMR.%20APLIKASI%20BERGERAK/MainGa/rules/PRD_MainGA.md) dan aturan [rules_mainga.md](file:///c:/Kuliah/Semester%205/PEMR.%20APLIKASI%20BERGERAK/MainGa/rules/rules_mainga.md):
-- **Backend**: Laravel REST API dengan database MySQL, otentikasi token menggunakan Laravel Sanctum, 10 migration tabel lengkap beserta model Eloquent & relasi, dan Feature Tests.
-- **Mobile**: Flutter untuk Android dengan struktur folder per fitur (*feature-first*), tema gelap elegan (*ungu-indigo*), penyimpanan token dengan `flutter_secure_storage`, konfigurasi base URL terpusat, layar Register, Login, serta Temporary Home Screen dengan tombol Logout.
-- **Batasan**: Tanpa Supabase / Firebase; seluruh pemanggilan pihak ketiga (RAWG/CheapShark) diisolasi di backend; tidak ada kode placeholder / kosong.
+Tahap 2 mengimplementasikan integrasi katalog game RAWG API dengan strategi *caching multi-layer*, fitur pencarian dan filter game, layar detail game, serta arsitektur navigasi utama aplikasi mobile sesuai [PRD](rules/PRD_MainGA.md) dan aturan [rules_mainga.md](rules/rules_mainga.md):
+
+- **Backend (Laravel REST API)**:
+  - Pembacaan aman `RAWG_API_KEY` dari `.env` via `config/services.php` (kunci tidak pernah terekspos ke aplikasi client, repositori, maupun log).
+  - Service class `RawgService` dengan timeout 10 detik dan penanganan galat yang aman.
+  - Artisan Command `php artisan rawg:sync-master` untuk mengisi data master `genres` dan `platforms` dari RAWG API (dengan fallback data standar jika offline).
+  - Endpoint terproteksi Sanctum (`auth:sanctum`):
+    - `GET /api/games` : Pencarian judul game, filter genre, platform, rating minimum, serta pagination.
+    - `GET /api/games/{id}` : Detail game lengkap (deskripsi, genre, platform, rating, tanggal rilis).
+    - `GET /api/genres` : Daftar seluruh master genre untuk filter.
+    - `GET /api/platforms` : Daftar seluruh master platform untuk filter.
+  - Caching 2-lapis:
+    - *Layer A (Response Cache)*: Laravel Cache selama 1 jam untuk pencarian identik agar waktu respons di bawah 3 detik dan menghemat kuota RAWG (20.000 req/bulan).
+    - *Layer B (Database Cache)*: Data game dan relasi pivot `game_genre` & `game_platform` disimpan ke database dengan kolom `cached_at`, dianggap kedaluwarsa setelah 7 hari. Deskripsi lengkap diambil hanya saat detail dibuka dan belum tersimpan.
+  - Fallback ke database lokal jika RAWG gagal dijangkau, atau mengembalikan JSON error 503 jika data belum pernah dicache.
+  - 8 Feature Tests komprehensif menggunakan `Http::fake` mencakup pencarian, filter, cache panggilan kedua, detail game, 401 tanpa token, dan penanganan galat RAWG.
+
+- **Mobile (Flutter Android)**:
+  - Navigasi utama 4 tab bergaya melayang (*floating bottom navigation*) dengan warna aksen ungu/indigo: **Jelajah**, **Library**, **Wishlist**, dan **Profil**. Pengguna otomatis diarahkan ke tab Jelajah setelah login.
+  - **Tab Jelajah**: Kolom pencarian dengan debounce, chip filter genre horizontal, filter platform & rating minimum via modal bottom sheet, daftar kartu game (cover thumbnail, judul, genre, rating), *infinite scroll pagination*, serta *loading*, *empty*, dan *error state*.
+  - **Layar Detail Game**: Cover besar dengan gradient scrim, judul game, badge rating & tanggal rilis, tag chip genre & platform, dan deskripsi lengkap dengan tombol toggle *"Baca selengkapnya"*.
+  - **Tab Library & Wishlist**: Tampilan kosong yang informatif (*"Belum ada game"*) tanpa teks pengembangan tahap/versi.
+  - **Tab Profil**: Nama pengguna, email, dan tombol konfirmasi logout. Seluruh teks konfirmasi sementara tahap 1 telah dibersihkan dari aplikasi.
+  - **Atribusi "Data by RAWG"**: Tautan interaktif yang dapat diklik membuka `https://rawg.io` menggunakan plugin `url_launcher`, tampil di halaman Jelajah dan layar detail game.
+  - Semua pemanggilan API murni ke backend sendiri melalui `ApiConstants`.
 
 ---
 
@@ -20,35 +41,32 @@ Tahap 1 mencakup fondasi arsitektur sistem dari **Minggu 1** dan fitur autentika
 MainGa/
 ├── backend/                             # REST API Laravel
 │   ├── app/
+│   │   ├── Console/Commands/
+│   │   │   └── SyncRawgMetadata.php    # Command artisan rawg:sync-master
 │   │   ├── Http/Controllers/Api/
-│   │   │   └── AuthController.php      # Controller Register, Login, Logout, Me
-│   │   └── Models/                     # 8 Eloquent Models & Relasi
-│   │       ├── User.php
-│   │       ├── Game.php
-│   │       ├── Genre.php
-│   │       ├── Platform.php
-│   │       ├── LibraryEntry.php
-│   │       ├── WishlistAlert.php
-│   │       ├── PriceHistory.php
-│   │       └── Notification.php
+│   │   │   ├── AuthController.php      # Controller Register, Login, Logout, Me
+│   │   │   └── GameController.php      # Controller Games, Genres, Platforms
+│   │   ├── Models/                     # 8 Eloquent Models & Relasi
+│   │   │   ├── User.php
+│   │   │   ├── Game.php
+│   │   │   ├── Genre.php
+│   │   │   ├── Platform.php
+│   │   │   ├── LibraryEntry.php
+│   │   │   ├── WishlistAlert.php
+│   │   │   ├── PriceHistory.php
+│   │   │   └── Notification.php
+│   │   └── Services/
+│   │       └── RawgService.php         # Service klien RAWG API aman & terisolasi
+│   ├── config/
+│   │   └── services.php                # Konfigurasi rawg (key, base_url, timeout)
 │   ├── database/
 │   │   ├── factories/UserFactory.php
 │   │   └── migrations/                 # 10 Tabel PRD Bagian 11
-│   │       ├── 0001_01_01_000000_create_users_table.php
-│   │       ├── 2026_10_29_113018_create_personal_access_tokens_table.php
-│   │       ├── 2026_10_29_120000_create_games_table.php
-│   │       ├── 2026_10_29_120001_create_genres_table.php
-│   │       ├── 2026_10_29_120002_create_game_genre_table.php
-│   │       ├── 2026_10_29_120003_create_platforms_table.php
-│   │       ├── 2026_10_29_120004_create_game_platform_table.php
-│   │       ├── 2026_10_29_120005_create_library_entries_table.php
-│   │       ├── 2026_10_29_120006_create_wishlist_alerts_table.php
-│   │       ├── 2026_10_29_120007_create_price_history_table.php
-│   │       └── 2026_10_29_120008_create_notifications_table.php
 │   ├── routes/
-│   │   └── api.php                     # Route API Auth (register, login, logout, me)
+│   │   └── api.php                     # Route API Auth & Games
 │   ├── tests/Feature/
-│   │   └── AuthTest.php                # 8 Feature Tests Auth
+│   │   ├── AuthTest.php                # 10 Tests Auth (Sanctum)
+│   │   └── GameTest.php                # 8 Tests Games (Http::fake & RAWG)
 │   ├── .env.example                    # Template konfigurasi MySQL & RAWG_API_KEY
 │   └── .env                            # Konfigurasi aktif lokal
 │
@@ -56,122 +74,82 @@ MainGa/
 │   ├── lib/
 │   │   ├── core/
 │   │   │   ├── constants/
-│   │   │   │   └── api_constants.dart  # 1 File Konfigurasi Base URL terpusat
+│   │   │   │   └── api_constants.dart  # Konfigurasi Base URL & Endpoint terpusat
 │   │   │   ├── storage/
-│   │   │   │   └── token_storage.dart  # Penyimpanan flutter_secure_storage
+│   │   │   │   └── token_storage.dart  # flutter_secure_storage
 │   │   │   └── theme/
-│   │   │       └── app_theme.dart      # Tema gelap bernuansa ungu-indigo
+│   │   │       └── app_theme.dart      # Tema gelap ungu-indigo (anti-slop)
 │   │   ├── features/
-│   │   │   ├── auth/
+│   │   │   ├── auth/                   # Fitur Autentikasi
 │   │   │   │   ├── data/
-│   │   │   │   │   ├── datasources/auth_remote_data_source.dart
+│   │   │   │   └── presentation/
+│   │   │   ├── games/                  # Fitur Jelajah & Detail Game (Tahap 2)
+│   │   │   │   ├── data/
+│   │   │   │   │   ├── datasources/game_remote_data_source.dart
 │   │   │   │   │   └── models/
-│   │   │   │   │       ├── auth_response_model.dart
-│   │   │   │   │       └── user_model.dart
+│   │   │   │   │       ├── game_model.dart
+│   │   │   │   │       ├── games_response_model.dart
+│   │   │   │   │       ├── genre_model.dart
+│   │   │   │   │       └── platform_model.dart
 │   │   │   │   └── presentation/
 │   │   │   │       ├── screens/
-│   │   │   │       │   ├── login_screen.dart
-│   │   │   │       │   ├── register_screen.dart
-│   │   │   │       │   └── splash_screen.dart
+│   │   │   │       │   ├── explore_screen.dart
+│   │   │   │       │   └── game_detail_screen.dart
 │   │   │   │       └── widgets/
-│   │   │   │           ├── custom_text_field.dart
-│   │   │   │           └── primary_button.dart
-│   │   │   └── home/
-│   │   │       └── presentation/screens/
-│   │   │           └── home_screen.dart # Halaman Utama Sementara + Tombol Logout
+│   │   │   │           ├── game_card.dart
+│   │   │   │           └── rawg_attribution.dart
+│   │   │   ├── home/
+│   │   │   │   └── presentation/screens/
+│   │   │   │       └── home_screen.dart # Floating Bottom Navigation (4 Tab)
+│   │   │   ├── library/
+│   │   │   │   └── presentation/screens/library_screen.dart
+│   │   │   ├── wishlist/
+│   │   │   │   └── presentation/screens/wishlist_screen.dart
+│   │   │   └── profile/
+│   │   │       └── presentation/screens/profile_screen.dart
 │   │   └── main.dart
 │   └── test/
-│       └── widget_test.dart            # Unit & Widget Tests Flutter
+│       └── widget_test.dart            # Unit & Widget Tests Flutter (13 tests)
 │
-└── rules/                               # Dokumen Acuan (PRD & Rules)
+└── rules/                               # Dokumen Acuan
     ├── PRD_MainGA.md
     └── rules_mainga.md
 ```
 
 ---
 
-## 🗄️ Skema Database (Sesuai Bagian 11 PRD)
+## 🔑 Konfigurasi RAWG_API_KEY
 
-Semua tabel telah diimplementasikan dengan migrasi dan model Eloquent:
-
-1. **`users`**: `id`, `nama`, `email` *(unik)*, `password` *(bcrypt hash)*, `timestamps`.
-2. **`games`**: `id`, `rawg_id` *(unik)*, `judul`, `cover_url`, `rating`, `deskripsi`, `tanggal_rilis`, `cached_at`, `timestamps`.
-3. **`genres`**: `id`, `nama`, `rawg_id`, `timestamps`.
-4. **`game_genre`** *(pivot)*: `game_id`, `genre_id` *(primary composite key & cascade delete)*.
-5. **`platforms`**: `id`, `nama`, `rawg_id`, `timestamps`.
-6. **`game_platform`** *(pivot)*: `game_id`, `platform_id` *(primary composite key & cascade delete)*.
-7. **`library_entries`**: `id`, `user_id`, `game_id`, `status` (*Wishlist, Backlog, Sedang Dimainkan, Tamat, Dropped*), `rating_pribadi` *(1-10)*, `jam_main`, `catatan`, `tanggal_tamat`, `timestamps`. **Constraint**: `UNIQUE(user_id, game_id)`.
-8. **`wishlist_alerts`**: `id`, `user_id`, `game_id`, `harga_target` *(USD)*, `aktif` *(boolean)*, `timestamps`. **Constraint**: `UNIQUE(user_id, game_id)`.
-9. **`price_history`**: `id`, `game_id`, `toko`, `harga`, `diskon_persen`, `dicek_pada`, `timestamps`. **Indeks**: indeks pada `game_id`, `dicek_pada`, dan indeks gabungan `(game_id, dicek_pada)`.
-10. **`notifications`**: `id`, `user_id`, `game_id` *(nullable)*, `judul`, `pesan`, `harga`, `toko`, `dibaca_pada`, `timestamps`.
-
----
-
-## 🔌 Dokumentasi REST API Tahap 1
-
-Format respons terstruktur JSON seragam:
-```json
-{
-  "success": true,
-  "message": "Pesan deskriptif",
-  "data": { ... }
-}
-```
-
-### 1. Register Pengguna
-- **Method / URL**: `POST /api/register`
-- **Headers**: `Content-Type: application/json`, `Accept: application/json`
-- **Body**:
-  ```json
-  {
-    "nama": "Dimas Gamer",
-    "email": "dimas@example.com",
-    "password": "password123"
-  }
-  ```
-- **Validasi**: `nama` wajib, `email` valid & unik di tabel `users`, `password` minimal 8 karakter.
-- **Respons Sukses (201 Created)**: Mengembalikan user dan Sanctum `token`.
-- **Respons Gagal (422 Unprocessable Content)**: Mengembalikan pesan error validasi terstruktur per field.
-
-### 2. Login Pengguna
-- **Method / URL**: `POST /api/login`
-- **Headers**: `Content-Type: application/json`, `Accept: application/json`
-- **Body**:
-  ```json
-  {
-    "email": "dimas@example.com",
-    "password": "password123"
-  }
-  ```
-- **Respons Sukses (200 OK)**: Mengembalikan user dan Sanctum `token`.
-- **Respons Gagal (401 Unauthorized)**: Jika email atau password salah.
-
-### 3. Logout Pengguna
-- **Method / URL**: `POST /api/logout`
-- **Headers**: `Authorization: Bearer <TOKEN>`, `Accept: application/json`
-- **Respons Sukses (200 OK)**: Mencabut dan menghapus token aktif di server.
-- **Respons Tanpa Token (401 Unauthorized)**: Akses ditolak.
-
-### 4. Ambil Profil Pengguna
-- **Method / URL**: `GET /api/me`
-- **Headers**: `Authorization: Bearer <TOKEN>`, `Accept: application/json`
-- **Respons Sukses (200 OK)**: Mengembalikan data user yang sedang login.
+1. Dapatkan API Key gratis di [RAWG API](https://rawg.io/apidocs).
+2. Buka berkas `backend/.env` dan isi variabel `RAWG_API_KEY`:
+   ```env
+   RAWG_API_KEY=masukkan_api_key_rawg_anda_di_sini
+   ```
+3. Backend akan membaca konfigurasi ini melalui `backend/config/services.php`:
+   ```php
+   'rawg' => [
+       'key' => env('RAWG_API_KEY'),
+       'base_url' => env('RAWG_BASE_URL', 'https://api.rawg.io/api'),
+       'timeout' => (int) env('RAWG_TIMEOUT', 10),
+   ],
+   ```
+4. Kunci ini **tidak pernah dikirim ke aplikasi mobile**, tidak dicatat di log, dan tidak ditulis langsung pada kode sumber.
 
 ---
 
 ## 🚀 Cara Menjalankan Backend (Laravel)
 
 ### 1. Prasyarat
-- PHP 8.2+ (dengan extension `pdo_mysql`, `zip`, `mbstring`, `curl`)
+- PHP 8.2+ (disarankan PHP 8.3 / 8.5 dengan ekstensi `pdo_mysql`, `curl`, `mbstring`, `zip`, `fileinfo`)
 - MySQL Server (misal via XAMPP Control Panel)
 - Composer 2.x
 
 ### 2. Langkah Setup
-1. Masuk ke folder backend:
+1. Masuk ke direktori backend:
    ```bash
    cd backend
    ```
-2. Pastikan file `.env` sudah ada dan database MySQL aktif:
+2. Pastikan file `.env` sudah sesuai:
    ```env
    DB_CONNECTION=mysql
    DB_HOST=127.0.0.1
@@ -179,16 +157,19 @@ Format respons terstruktur JSON seragam:
    DB_DATABASE=mainga
    DB_USERNAME=root
    DB_PASSWORD=
+
+   RAWG_API_KEY=60322e33ee95489f892585fe4cd58187
    ```
-3. Buat database di MySQL jika belum ada:
-   ```sql
-   CREATE DATABASE mainga;
-   ```
-4. Jalankan migrasi database:
+3. Pastikan database MySQL aktif dan jalankan migrasi tabel:
    ```bash
    php artisan migrate
    ```
-5. Jalankan Feature Tests backend untuk memastikan semua fungsi lulus:
+4. **Jalankan command sinkronisasi master genre dan platform**:
+   ```bash
+   php artisan rawg:sync-master
+   ```
+   *Perintah ini memanggil RAWG API untuk mengisi master data ke tabel `genres` dan `platforms`. Jika offline, perintah secara cerdas menyemai data standar populer.*
+5. Jalankan Feature Tests backend:
    ```bash
    php artisan test
    ```
@@ -196,18 +177,18 @@ Format respons terstruktur JSON seragam:
    ```bash
    php artisan serve --host=0.0.0.0 --port=8000
    ```
-   Server akan berjalan di `http://127.0.0.1:8000` (atau IP lokal host).
+   Server REST API siap melayani permintaan di `http://127.0.0.1:8000` (atau IP LAN).
 
 ---
 
 ## 📱 Cara Menjalankan Mobile (Flutter)
 
 ### 1. Prasyarat
-- Flutter SDK 3.13+
-- Android Studio / Android SDK (Emulator atau HP Fisik dengan USB Debugging aktif)
+- Flutter SDK 3.13+ (didukung hingga Flutter 3.47 / Dart 3.13+)
+- Android Emulator atau HP Android fisik
 
 ### 2. Konfigurasi Base URL API
-Buka satu file konfigurasi di:
+Buka berkas konfigurasi di:
 `mobile/lib/core/constants/api_constants.dart`
 
 - **Jika menggunakan Android Emulator**:
@@ -215,11 +196,11 @@ Buka satu file konfigurasi di:
   static const String baseUrl = 'http://10.0.2.2:8000/api';
   ```
 - **Jika menggunakan HP Android Fisik via Wi-Fi**:
-  Ganti dengan alamat IP LAN laptop/komputer Anda, misalnya:
+  Ganti dengan IP lokal laptop/PC Anda, misalnya:
   ```dart
   static const String baseUrl = 'http://192.168.1.15:8000/api';
   ```
-- **Jika diuji di Windows Desktop / Web**:
+- **Jika diuji di Windows Desktop / Chrome**:
   ```dart
   static const String baseUrl = 'http://127.0.0.1:8000/api';
   ```
@@ -229,14 +210,55 @@ Buka satu file konfigurasi di:
    ```bash
    cd mobile
    ```
-2. Jalankan test otomatis:
+2. Ambil paket dependensi:
    ```bash
+   flutter pub get
+   ```
+3. Jalankan pengujian statis dan pengujian otomatis:
+   ```bash
+   flutter analyze
    flutter test
    ```
-3. Hubungkan perangkat / nyalakan Android Emulator, lalu jalankan aplikasi:
+4. Jalankan aplikasi pada perangkat atau emulator:
    ```bash
    flutter run
    ```
+
+---
+
+## 🔌 Dokumentasi REST API Lengkap
+
+Semua endpoint mengembalikan respons seragam JSON:
+```json
+{
+  "success": true,
+  "message": "Pesan deskriptif",
+  "data": { ... }
+}
+```
+
+### Endpoint Autentikasi (Publik & Terproteksi)
+- `POST /api/register` : Mendaftar akun baru (`nama`, `email`, `password` min 8 karakter). Status 201.
+- `POST /api/login` : Masuk akun dan menerbitkan Bearer token. Status 200.
+- `POST /api/logout` : Mencabut token aktif di server (`auth:sanctum`). Status 200.
+- `GET /api/me` : Ambil data profil pengguna yang sedang login (`auth:sanctum`). Status 200.
+
+### Endpoint Katalog Game (Tahap 2 — `auth:sanctum`)
+- `GET /api/genres` :
+  Mengambil daftar seluruh genre game untuk opsi filter.
+- `GET /api/platforms` :
+  Mengambil daftar seluruh platform game untuk opsi filter.
+- `GET /api/games` :
+  Pencarian dan penjelajahan game.
+  - Parameter query:
+    - `search` *(opsional)* : Kata kunci judul game.
+    - `genre` *(opsional)* : Filter genre (id, nama, atau slug).
+    - `platform` *(opsional)* : Filter platform (id atau nama).
+    - `rating` *(opsional)* : Rating minimum (misal: `4.0`).
+    - `page` *(opsional, default: 1)* : Halaman pagination.
+    - `per_page` *(opsional, default: 20)* : Jumlah item per halaman.
+- `GET /api/games/{id}` :
+  Detail lengkap suatu game berdasarkan ID lokal atau RAWG ID. Mengambil deskripsi lengkap dari endpoint detail RAWG hanya saat detail dibuka dan belum tersimpan di database.
 
 ---
 
@@ -244,35 +266,58 @@ Buka satu file konfigurasi di:
 
 ### 1. Backend (PHPUnit / Laravel Feature Tests)
 Dijalankan dengan perintah: `php artisan test`
-- ✅ `User can register with valid data` — Registrasi sukses (status 201, password ter-hash bcrypt, token terbit, data masuk ke database MySQL).
-- ✅ `Register fails when email already registered` — Validasi email unik (status 422).
-- ✅ `Register fails when password too short` — Validasi password min 8 karakter sesuai PRD (status 422).
-- ✅ `User can login with correct credentials` — Login sukses menerbitkan token Sanctum (status 200).
-- ✅ `User cannot login with wrong password` — Login ditolak saat password salah (status 401).
-- ✅ `User cannot login with nonexistent email` — Login ditolak saat email tidak terdaftar (status 401).
-- ✅ `User can logout with valid token` — Logout berhasil dan token dicabut dari server (status 200).
-- ✅ `Unauthenticated access without token returns 401` — Akses endpoint terproteksi tanpa token ditolak (status 401).
+- ✅ `User can register with valid data` (Auth)
+- ✅ `Register fails when email already registered` (Auth)
+- ✅ `Register fails when password too short` (Auth)
+- ✅ `User can login with correct credentials` (Auth)
+- ✅ `User cannot login with wrong password` (Auth)
+- ✅ `User cannot login with nonexistent email` (Auth)
+- ✅ `User can logout with valid token` (Auth)
+- ✅ `Unauthenticated access without token returns 401` (Auth)
+- ✅ `Me returns user data with valid token` (Auth)
+- ✅ `Password is hashed in database` (Auth)
+- ✅ `Unauthenticated access without token returns 401 on games, genres, platforms` (Game)
+- ✅ `Genres and platforms endpoints return master data` (Game)
+- ✅ `Search games with Http::fake and stores to database & pivot` (Game)
+- ✅ `Filter games by genre, platform, and minimum rating` (Game)
+- ✅ `Search uses cache on second call within short time` (Game - Layer A & B)
+- ✅ `Game detail fetches and caches description on demand` (Game)
+- ✅ `RAWG failure falls back to database if available` (Game)
+- ✅ `RAWG failure returns clear error JSON 503 when no local data` (Game)
 
-**Hasil**: **10 passed, 31 assertions, 0 failed**.
+**Hasil Backend**: **18 passed, 82 assertions, 0 failed**.
 
 ### 2. Mobile (Flutter Unit & Widget Tests)
 Dijalankan dengan perintah: `flutter test`
 - ✅ `UserModel.fromJson parses attributes correctly`
 - ✅ `AuthResponseModel.fromJson parses success response correctly`
 - ✅ `AuthResponseModel.fromJson parses error response correctly`
+- ✅ `GenreModel.fromJson parses attributes correctly`
+- ✅ `PlatformModel.fromJson parses attributes correctly`
+- ✅ `GameModel.fromJson parses attributes correctly`
+- ✅ `GamesResponseModel.fromJson parses pagination and games list`
 - ✅ `MainGaApp builds successfully`
 - ✅ `LoginScreen displays required form fields and buttons`
+- ✅ `RawgAttribution renders attribution text`
+- ✅ `HomeScreen displays floating navigation bar with 4 tabs`
+- ✅ `LibraryScreen displays informative empty state`
+- ✅ `WishlistScreen displays informative empty state`
 - ✅ `flutter analyze` : **No issues found!**
+
+**Hasil Mobile**: **13 passed, 0 failed**.
 
 ---
 
-## 📝 Catatan Keputusan Desain
+## 📝 Catatan Keputusan Desain & Implementasi Tahap 2
 
-1. **Kolom Nama Pengguna**:
-   Tabel `users` menggunakan kolom `nama` sesuai Bagian 11 PRD. Model Eloquent `User.php` dilengkapi mutator/accessor `name` agar kompatibel dengan fungsionalitas internal Laravel bila diperlukan.
-2. **Penyimpanan Token Mobile**:
-   Menggunakan `flutter_secure_storage` dengan opsi terenkripsi. Token otomatis dibaca saat splash screen dibuka untuk fitur auto-login.
-3. **Penanganan Akses Tanpa Token**:
-   Dikonfigurasi di `backend/bootstrap/app.php` dengan `shouldRenderJsonWhen` dan render khusus `AuthenticationException` serta `ValidationException`, memastikan semua rute API mengembalikan status 401/422 berformat JSON yang konsisten.
-4. **Atribusi RAWG**:
-   Sesuai `rules_mainga.md`, badge atribusi *"Data by RAWG & CheapShark"* telah disematkan pada layar Login dan Halaman Utama.
+1. **Strategi Caching 2-Lapis**:
+   - *Layer A (Short-term Query Cache)*: Dikelola oleh Laravel `Cache::put()` berdasarkan hash parameter pencarian (search, genre, platform, rating, page) selama 1 jam. Panggilan identik dalam waktu singkat dilayani seketika tanpa melakukan query eksternal maupun komputasi berat.
+   - *Layer B (Persistent DB Cache & 7-Day Invalidation)*: Setiap game yang diambil dari RAWG otomatis disinkronkan ke tabel `games` beserta relasi pivot `game_genre` dan `game_platform` dengan mencatat `cached_at = now()`. Data dianggap kedaluwarsa setelah 7 hari (`Carbon::parse($game->cached_at)->addDays(7)->isPast()`).
+2. **On-Demand Game Description**:
+   - Untuk menghemat kuota RAWG (20.000 req/bulan), deskripsi lengkap game hanya diambil dari endpoint detail RAWG saat pengguna membuka halaman detail game dan game tersebut belum memiliki deskripsi di database.
+3. **Penyelamatan Saat RAWG Gagal (Graceful Degradation)**:
+   - Jika panggilan ke RAWG mengalami timeout atau galat jaringan, backend secara otomatis melakukan pencarian pada database lokal `games` dengan filter Eloquent. Jika data lokal ada, sistem mengembalikannya dengan normal; bila tidak ada, sistem mengembalikan kode HTTP 503 dengan pesan JSON yang informatif.
+4. **Navigasi Tab Melayang (Floating Bar)**:
+   - Menggunakan `extendBody: true` pada Scaffold dengan `Container` berpenampilan modern, border halus, bayangan lembut, dan penanda aktif ungu (`Color(0xFF8B5CF6)`), sesuai filosofi anti-slop pada `design_taste_frontend` dan `rules_mainga.md`.
+5. **Atribusi RAWG Sesuai Kebijakan Layanan**:
+   - Komponen `RawgAttribution` disematkan di bagian bawah tab Jelajah dan layar detail game, dilengkapi penanganan `url_launcher` untuk membuka situs resmi `https://rawg.io` di browser eksternal.
