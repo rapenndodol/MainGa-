@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\GameController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -9,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 |
 | Tahap 1: Autentikasi Pengguna (Register, Login, Logout)
+| Tahap 2: Integrasi RAWG, Pencarian & Filter Game, Detail Game
 |
 */
 
@@ -21,4 +23,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::get('/user', [AuthController::class, 'me']);
+
+    // Tahap 2: Games, Genres, Platforms
+    Route::get('/games', [GameController::class, 'index']);
+    Route::get('/games/{id}', [GameController::class, 'show']);
+    Route::get('/genres', [GameController::class, 'genres']);
+    Route::get('/platforms', [GameController::class, 'platforms']);
 });
