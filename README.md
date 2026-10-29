@@ -1,7 +1,7 @@
 # MainGa? — Aplikasi Pengelola Koleksi dan Backlog Game
 
 > Proyek UAS Pemrograman Aplikasi Bergerak — S1 Sistem Informasi, Universitas Negeri Surabaya  
-> Penulis: Rapen | Versi: 1.0 (Implementasi TAHAP 1)
+> Penulis: Yosua Arthur P. S
 
 ---
 
