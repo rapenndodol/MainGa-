@@ -8,12 +8,17 @@
 class ApiConstants {
   ApiConstants._();
 
-  // Ubah baris ini jika menguji di HP fisik atau server publik
-  static const String baseUrl = 'http://10.0.2.2:8000/api';
+  // Alamat aktif untuk pengujian lokal di Windows / Chrome
+  static const String baseUrl = 'http://127.0.0.1:8000/api';
 
   // Auth Endpoints
   static const String registerEndpoint = '$baseUrl/register';
   static const String loginEndpoint = '$baseUrl/login';
   static const String logoutEndpoint = '$baseUrl/logout';
   static const String meEndpoint = '$baseUrl/me';
+
+  // Games & Filter Endpoints
+  static const String gamesEndpoint = '$baseUrl/games';
+  static const String genresEndpoint = '$baseUrl/genres';
+  static const String platformsEndpoint = '$baseUrl/platforms';
 }
