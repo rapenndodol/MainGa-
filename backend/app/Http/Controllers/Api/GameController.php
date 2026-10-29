@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\LibraryEntryResource;
 use App\Models\Game;
 use App\Models\Genre;
+use App\Models\LibraryEntry;
 use App\Models\Platform;
 use App\Services\RawgService;
 use Carbon\Carbon;
@@ -309,9 +311,9 @@ class GameController extends Controller
 
     /**
      * GET /api/games/{id}
-     * Detail game: deskripsi, genre, platform, rating, tanggal rilis
+     * Detail game: deskripsi, genre, platform, rating, tanggal rilis, dan status library pengguna
      */
-    public function show($id): JsonResponse
+    public function show(Request $request, $id): JsonResponse
     {
         // Cari game di database berdasarkan id (primary key) atau rawg_id
         $game = Game::with(['genres', 'platforms'])
@@ -393,22 +395,33 @@ class GameController extends Controller
             $genreNames = $game->genres->pluck('nama')->toArray();
             $platformNames = $game->platforms->pluck('nama')->toArray();
 
+            $user = $request->user() ?? auth('sanctum')->user();
+            $libraryEntry = null;
+            if ($user) {
+                $libraryEntry = LibraryEntry::with(['game.genres', 'game.platforms'])
+                    ->where('user_id', $user->id)
+                    ->where('game_id', $game->id)
+                    ->first();
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Detail game berhasil diambil',
                 'data'    => [
-                    'id'            => $game->id,
-                    'rawg_id'       => $game->rawg_id,
-                    'judul'         => $game->judul,
-                    'cover_url'     => $game->cover_url,
-                    'rating'        => (float) $game->rating,
-                    'deskripsi'     => $game->deskripsi ?? 'Deskripsi belum tersedia.',
-                    'tanggal_rilis' => $game->tanggal_rilis ? Carbon::parse($game->tanggal_rilis)->format('Y-m-d') : null,
-                    'genre'         => implode(', ', $genreNames),
-                    'genres'        => $genreNames,
-                    'platform'      => implode(', ', $platformNames),
-                    'platforms'     => $platformNames,
-                    'cached_at'     => $game->cached_at ? Carbon::parse($game->cached_at)->toIso8601String() : null,
+                    'id'             => $game->id,
+                    'rawg_id'        => $game->rawg_id,
+                    'judul'          => $game->judul,
+                    'cover_url'      => $game->cover_url,
+                    'rating'         => (float) $game->rating,
+                    'deskripsi'      => $game->deskripsi ?? 'Deskripsi belum tersedia.',
+                    'tanggal_rilis'  => $game->tanggal_rilis ? Carbon::parse($game->tanggal_rilis)->format('Y-m-d') : null,
+                    'genre'          => implode(', ', $genreNames),
+                    'genres'         => $genreNames,
+                    'platform'       => implode(', ', $platformNames),
+                    'platforms'      => $platformNames,
+                    'cached_at'      => $game->cached_at ? Carbon::parse($game->cached_at)->toIso8601String() : null,
+                    'library_status' => $libraryEntry?->status,
+                    'library_entry'  => $libraryEntry ? new LibraryEntryResource($libraryEntry) : null,
                 ],
             ], 200);
         }
