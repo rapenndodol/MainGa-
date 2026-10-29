@@ -321,3 +321,116 @@ Dijalankan dengan perintah: `flutter test`
    - Menggunakan `extendBody: true` pada Scaffold dengan `Container` berpenampilan modern, border halus, bayangan lembut, dan penanda aktif ungu (`Color(0xFF8B5CF6)`), sesuai filosofi anti-slop pada `design_taste_frontend` dan `rules_mainga.md`.
 5. **Atribusi RAWG Sesuai Kebijakan Layanan**:
    - Komponen `RawgAttribution` disematkan di bagian bawah tab Jelajah dan layar detail game, dilengkapi penanganan `url_launcher` untuk membuka situs resmi `https://rawg.io` di browser eksternal.
+
+
+---
+
+## 📌 Deskripsi Tahap 3 (Library Pribadi — US-03 & F-04)
+
+Tahap 3 mengimplementasikan fitur pengelolaan koleksi dan backlog bermain game milik pengguna secara terpersonalisasi sesuai [PRD](rules/PRD_MainGA.md) dan aturan [rules_mainga.md](rules/rules_mainga.md):
+
+- **Backend (Laravel REST API)**:
+  - Menggunakan tabel `library_entries` yang terelasi dengan `users` dan `games`.
+  - **Form Request & API Resource**:
+    - `StoreLibraryEntryRequest`: Validasi input penambahan game ke library (game_id/rawg_id, status bermain, rating_pribadi 1-10, jam_main non-negatif, catatan).
+    - `UpdateLibraryEntryRequest`: Validasi pembaruan data entry library.
+    - `LibraryEntryResource`: Transformasi respons seragam memuat data game (judul, cover_url, rating, genre, platform) dan data entry (status, rating_pribadi, jam_main, catatan, tanggal_tamat).
+  - **Endpoint REST API Terproteksi Sanctum (`auth:sanctum`)**:
+    - `GET /api/library`: Daftar library milik pengguna yang sedang login, dilengkapi filter status horizontal (`Semua`, `Wishlist`, `Backlog`, `Sedang Dimainkan`, `Tamat`, `Dropped`) dan pagination.
+    - `POST /api/library`: Menambahkan game ke library. Menerima `game_id` atau `rawg_id`. Jika hanya `rawg_id` yang dikirim dan game belum ada di database lokal, backend mengambil detail dari `RawgService` dan menyimpannya.
+    - `GET /api/library/{id}`: Detail satu entry library milik pengguna.
+    - `PUT /api/library/{id}`: Mengubah status, rating pribadi (1-10), jam main (>= 0), dan catatan.
+    - `DELETE /api/library/{id}`: Menghapus game dari library pribadi.
+    - `GET /api/games/{id}`: Diperluas dengan field `library_status` (string status atau `null` jika belum ada di library) dan `library_entry` agar layar detail game langsung mengetahui status kepemilikan pengguna.
+  - **Aturan Bisnis & Integritas Data**:
+    - Status valid: `Wishlist`, `Backlog`, `Sedang Dimainkan`, `Tamat`, `Dropped`.
+    - Rating pribadi: integer 1 hingga 10 (opsional).
+    - Jam main: angka non-negatif (>= 0).
+    - Satu game hanya dapat muncul sekali per pengguna. Duplikasi ditolak dengan HTTP 422 dan pesan JSON informatif.
+    - Isolasi kepemilikan: pengguna hanya dapat melihat, mengubah, dan menghapus entry miliknya sendiri (mengembalikan HTTP 403 untuk akses entry orang lain).
+    - Otomatisasi `tanggal_tamat`: saat status berubah menjadi `Tamat`, `tanggal_tamat` otomatis diisi dengan tanggal hari ini; saat status diubah dari `Tamat` ke status lain, `tanggal_tamat` otomatis dikosongkan (`null`).
+  - **11 Feature Tests Backend Komprehensif** (`LibraryTest.php`):
+    - Tambah entry dengan `game_id`.
+    - Tambah entry dengan `rawg_id` (menggunakan `Http::fake` untuk menyimulasikan RAWG API).
+    - Penolakan game duplikat dengan status 422.
+    - Validasi aturan input (rating out of range, jam main negatif, status tidak valid).
+    - Otomatisasi pengisian dan pengosongan `tanggal_tamat`.
+    - Pembaruan status, rating, jam main, dan catatan.
+    - Penghapusan game dari library.
+    - Filter status dan pagination pada daftar library.
+    - Proteksi akses entry milik pengguna lain (403).
+    - Proteksi endpoint tanpa token Sanctum (401).
+    - Penyertaan status library pengguna pada endpoint detail game.
+
+- **Mobile (Flutter Android)**:
+  - **Tab Library**:
+    - Daftar kartu game koleksi (`LibraryGameCard`): cover thumbnail, judul game, badge status bermain dengan warna tematik, rating pribadi (`⭐ X/10`), jam bermain (`⏱️ X jam`), tanggal tamat jika selesai, dan preview kutipan catatan.
+    - Filter horizontal status chip (`Semua`, `Wishlist`, `Backlog`, `Sedang Dimainkan`, `Tamat`, `Dropped`) dengan indikator aktif berwarna aksen.
+    - *Pull-to-refresh* (`RefreshIndicator`) untuk memperbarui data seketika.
+    - *Infinite scroll pagination* otomatis saat mendekati bagian bawah layar.
+    - Penanganan status yang rapi: *loading indicator*, *empty state* informatif ("Belum ada game"), dan *error state* dengan tombol coba lagi.
+  - **Layar Detail Game**:
+    - Tombol aksi status library adaptif:
+      - Jika game belum ada di library: Tombol *"Tambah ke Library"* membuka form pemilihan status dan detail bermain.
+      - Jika game sudah tersimpan: Menampilkan badge status bermain aktif beserta keterangan *"Tersimpan di Library"* dan ikon edit untuk membuka form pembaruan.
+  - **Form Edit / Tambah Entry (`LibraryEntrySheet`)**:
+    - Modal bottom sheet modern berlatar gelap sesuai filosofi anti-slop `design-taste-frontend`.
+    - Pilihan status bermain interaktif berbentuk chip badge.
+    - Slider dan visual rating pribadi (1-10) dengan opsi hapus rating.
+    - Input jam bermain dengan validasi angka desimal non-negatif di sisi klien.
+    - Input catatan pribadi multi-line.
+    - Tombol simpan primer dengan status loading.
+    - Tombol hapus destruktif (khusus mode edit) dilengkapi dialog konfirmasi pencegahan salah hapus.
+  - **Reaktivitas Antar Layar Real-time (`LibraryNotifier`)**:
+    - Menggunakan pola Singleton `ChangeNotifier` (`LibraryNotifier.instance`).
+    - Setiap penambahan, pembaruan, atau penghapusan entry langsung menyinkronkan Tab Library dan Layar Detail Game secara instan tanpa perlu memuat ulang aplikasi atau login ulang.
+  - Semua pemanggilan API murni ke backend sendiri melalui `ApiConstants.libraryEndpoint`.
+
+---
+
+## 🚀 Cara Menjalankan & Menguji Fitur Tahap 3
+
+### 1. Backend (Laravel)
+1. Masuk ke folder backend:
+   ```bash
+   cd backend
+   ```
+2. Jalankan seluruh Feature Tests backend (29 tests):
+   ```bash
+   php artisan test
+   ```
+   *Seluruh 29 tests (Auth, Game, dan Library) akan lulus dengan status passed.*
+3. Jalankan server backend:
+   ```bash
+   php artisan serve --host=0.0.0.0 --port=8000
+   ```
+
+### 2. Mobile (Flutter)
+1. Masuk ke folder mobile:
+   ```bash
+   cd mobile
+   ```
+2. Jalankan analisis statis dan pengujian otomatis:
+   ```bash
+   flutter analyze
+   flutter test
+   ```
+   *Analisis menghasilkan No issues found dan 17 tests passed.*
+3. Jalankan aplikasi pada perangkat Android / emulator / desktop:
+   ```bash
+   flutter run
+   ```
+
+---
+
+## 📝 Catatan Keputusan Desain & Implementasi Tahap 3
+
+1. **Integritas Relasi dan Pencegahan Duplikasi**:
+   - Backend memverifikasi keberadaan game pada database lokal maupun RAWG sebelum memasukkan ke library. Duplikasi diperiksa di level controller dan dijamin oleh indeks unik database `unique(['user_id', 'game_id'])`.
+2. **Otomatisasi `tanggal_tamat`**:
+   - Status `Tamat` secara cerdas mencatat `now()->toDateString()`. Jika pengguna mengembalikan status ke `Sedang Dimainkan` atau `Backlog`, `tanggal_tamat` otomatis di-reset menjadi `null` agar kalkulasi statistik (tahap berikutnya) tidak mengalami bias data.
+3. **Sinkronisasi Reaktif Tanpa Refresh Manual (`LibraryNotifier`)**:
+   - Modifikasi library pada layar detail atau bottom sheet memicu `LibraryNotifier.instance.notifyUpdated()` / `notifyAdded()` / `notifyDeleted()`. Tab Library yang berada di dalam `IndexedStack` mendengarkan notifikasi ini dan secara otomatis memuat ulang koleksi tanpa memerlukan intervensi pengguna.
+4. **Penerapan Gaya Visual Anti-Slop (Skill `design-taste-frontend`)**:
+   - Status badge diberi kode warna fungsional yang tenang: Cyan untuk Wishlist, Indigo untuk Backlog, Amber untuk Sedang Dimainkan, Emerald Green untuk Tamat, dan Rose untuk Dropped.
+   - Kartu dirancang rata (*flat surfaces*), dibatasi garis 1px (`#2E2A48`), dengan hierarki tipografi kontras dan indikator data jujur (nilai kosong ditampilkan `-` atau indikasi ramah).
