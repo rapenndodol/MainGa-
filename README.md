@@ -158,7 +158,7 @@ MainGa/
    DB_USERNAME=root
    DB_PASSWORD=
 
-   RAWG_API_KEY=60322e33ee95489f892585fe4cd58187
+   RAWG_API_KEY=xxxxxxxxxxxxxxxxxxxx
    ```
 3. Pastikan database MySQL aktif dan jalankan migrasi tabel:
    ```bash
