@@ -598,3 +598,86 @@ Dijalankan dengan: `php artisan test`
    - ✅ Artisan command `prices:check --game={id}` mengecek 1 game secara manual.
 
 **Total Pengujian Backend**: **49 passed, 248 assertions, 0 failed**.
+
+
+---
+
+## 🎯 Implementasi Mobile: Wishlist & Pelacak Harga (US-04 & US-05)
+
+Fitur Wishlist dengan Harga Target dan Pelacak Harga multi-toko kini telah diimplementasikan secara penuh pada aplikasi Flutter sesuai PRD dan aturan `rules_mainga.md`:
+
+### 1. Tab Wishlist (US-04)
+- **Kartu Wishlist Interaktif (`WishlistGameCard`)**:
+  - Menampilkan thumbnail cover game, judul game, harga target (USD) beserta estimasi Rupiah (`estimasi Rp...`).
+  - Menampilkan harga terendah terkini beserta nama toko (`Steam`, `Epic Games Store`, dll.) dan badge persentase diskon.
+  - Untuk game tanpa data harga CheapShark, ditampilkan label `"Harga belum tersedia"`.
+  - Penanda visual status target:
+    - Bila harga telah mencapai atau di bawah harga target (`harga_terendah <= harga_target`): badge hijau sukses (`✓ Mencapai target!`) beserta nominal penghematan.
+    - Bila harga masih di atas target: indikator selisih harga (`+$X.XX dari target`).
+  - Saklar (*Switch*) toggle aktif/nonaktif pantauan secara langsung dari kartu tanpa perlu membuka form.
+  - Geser (*Swipe Dismissible*) atau tombol ikon hapus dengan dialog konfirmasi modal sebelum game dihapus dari database.
+  - Ketuk kartu membuka layar detail game (`GameDetailScreen`).
+- **Penanganan Status Tampilan**:
+  - *Loading State*: Skeleton shimmer loading yang halus.
+  - *Empty State*: Menampilkan `"Belum ada game di wishlist"` lengkap dengan ikon dan deskripsi informatif serta ajakan mencari game di tab Jelajah.
+  - *Error State*: Tampilan galat rapi dengan tombol *"Coba Lagi"*.
+  - *Pull-to-refresh*: `RefreshIndicator` untuk menyegarkan data seketika.
+  - *Filter Cepat*: Chip filter horizontal (Semua / Pantauan Aktif / Nonaktif) serta pagination *infinite scroll*.
+
+### 2. Layar Detail Game: Wishlist Action & Form (US-04)
+- **Tombol Aksi Berdampingan Sempurna**:
+  - Tombol aksi Library dan Wishlist diletakkan berdampingan (*side-by-side*) secara proporsional di bawah header game tanpa merusak tata letak.
+  - Bila game belum ada di wishlist: menampilkan tombol *"Tambah ke Wishlist"*.
+  - Bila game sudah ada di wishlist: menampilkan kartu interaktif berisi target harga aktif dengan ikon edit untuk mengubah atau menghapus.
+- **Modal Bottom Sheet Wishlist (`WishlistFormSheet`)**:
+  - Input harga target dalam USD dengan validasi wajib > 0 (HTTP 422 dicegah sejak sisi klien).
+  - Label mata uang `"USD"` yang jelas.
+  - Perhitungan dinamis nilai estimasi Rupiah secara realtime saat pengguna mengetik, berlabel jelas `"estimasi"` (menggunakan kurs acuan `Rp 16.000 / USD`).
+  - Saklar pantauan aktif.
+  - Opsi hapus dari wishlist dengan konfirmasi modal saat mode ubah.
+
+### 3. Layar Detail Game: Bagian "Harga" & Grafik Riwayat (US-05)
+- **Bagian Harga Multi-Toko (`PriceTrackerSection`)**:
+  - Daftar penawaran harga per toko (nama toko, harga dalam USD, estimasi Rupiah, persentase diskon, dan waktu pengecekan terakhir), diurutkan dari harga termurah.
+  - Badge khusus `"Termurah di [Nama Toko]"` untuk penawaran terbaik.
+- **Grafik Garis Riwayat Harga (`LineChart` dari paket `fl_chart`)**:
+  - Mengambil data dari endpoint `/api/games/{id}/prices`.
+  - Visualisasi garis halus (*curved line*) beraksen warna tema obsidian & coral terracotta dengan area gradien lembut.
+  - Tooltip interaktif saat disentuh yang menampilkan nama toko, tanggal, dan nominal harga.
+  - Penanganan batas riwayat:
+    - Bila riwayat kosong: menampilkan keterangan `"Harga belum tersedia"`.
+    - Bila hanya ada 1 titik data: menampilkan titik harga tunggal disertai keterangan `"Riwayat belum cukup untuk grafik"` tanpa galat.
+
+### 4. Sinkronisasi Reaktif Lintas Layar
+- Menggunakan singleton `WishlistNotifier` (`ChangeNotifier`) yang terintegrasi di `WishlistScreen` dan `GameDetailScreen`.
+- Setiap penambahan, pembaruan, pengubahan toggle aktif, atau penghapusan game dari wishlist akan langsung memperbarui tab Wishlist dan layar detail secara reaktif tanpa perlu memuat ulang (*restart*) aplikasi.
+
+---
+
+## 🎲 Data Simulasi Riwayat Harga (Demo Lokal)
+
+Tersedia seeder khusus pengembangan lokal untuk mengisi tabel `price_history` dengan titik-titik harga simulasi selama 4 minggu ke belakang pada beberapa toko (Steam, Epic Games Store, GOG) dengan fluktuasi harga wajar, termasuk titik penawaran diskon yang berada di bawah harga target:
+
+```bash
+cd backend
+php artisan db:seed --class=PriceHistoryDemoSeeder
+```
+
+> ⚠️ **Catatan Penting**: Seeder `PriceHistoryDemoSeeder` ini **HANYA UNTUK DEMO & PENGEMBANGAN LOKAL**. Seeder ini sengaja tidak dijalankan secara otomatis oleh `DatabaseSeeder` agar tidak memengaruhi data produksi atau pengujian otomatis.
+
+---
+
+## 🧪 Hasil Pengujian & Analisis (Mobile & Backend)
+
+1. **Flutter Analyzer**:
+   - Perintah: `cd mobile; flutter analyze`
+   - Hasil: **No issues found!** (0 error, 0 warning, 0 hint).
+
+2. **Flutter Widget & Unit Tests**:
+   - Perintah: `cd mobile; flutter test`
+   - Hasil: **All 25 tests passed!**
+   - Mencakup pengujian serialisasi `WishlistItemModel`, `WishlistResponseModel`, `GamePricesResponseModel`, widget `WishlistGameCard`, empty state `WishlistScreen`, serta seluruh widget testing yang sudah ada sebelumnya.
+
+3. **Backend Feature Tests**:
+   - Perintah: `cd backend; php artisan test --without-tty`
+   - Hasil: **51 passed, 263 assertions, 0 failed**.
