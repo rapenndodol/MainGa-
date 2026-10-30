@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/app_loading_skeleton.dart';
+import '../../../../core/widgets/app_rawg_attribution.dart';
+import '../../../../core/widgets/app_status_chip.dart';
 import '../../../library/data/models/library_entry_model.dart';
 import '../../../library/presentation/controllers/library_notifier.dart';
 import '../../../library/presentation/widgets/library_entry_sheet.dart';
-import '../../../library/presentation/widgets/library_status_badge.dart';
 import '../../data/datasources/game_remote_data_source.dart';
 import '../../data/models/game_model.dart';
-import '../widgets/rawg_attribution.dart';
 
 class GameDetailScreen extends StatefulWidget {
   final GameModel game;
@@ -69,7 +71,8 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
 
   Future<void> _fetchFullDetail() async {
     setState(() => _isLoadingDetail = true);
-    final detail = await _gameDataSource.getGameDetail(_game.id > 0 ? _game.id : _game.rawgId);
+    final detail =
+        await _gameDataSource.getGameDetail(_game.id > 0 ? _game.id : _game.rawgId);
     if (!mounted) return;
 
     if (detail != null) {
@@ -102,21 +105,25 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppColors.bg,
       body: CustomScrollView(
         slivers: [
-          // ── Sliver App Bar dengan Cover Besar ───────────────
+          // ── Sliver App Bar dengan Cover Imersif ──────────────
           SliverAppBar(
-            expandedHeight: 280.0,
+            expandedHeight: 290.0,
             pinned: true,
-            backgroundColor: AppTheme.surface,
+            backgroundColor: AppColors.bg,
             elevation: 0,
             leading: Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(AppSpacing.sm),
               child: CircleAvatar(
-                backgroundColor: Colors.black.withValues(alpha: 0.55),
+                backgroundColor: AppColors.surfaceElevated.withValues(alpha: 0.8),
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: AppColors.textPrimary,
+                    size: 18,
+                  ),
                   onPressed: () => Navigator.pop(context),
                 ),
               ),
@@ -134,18 +141,18 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                   else
                     _buildCoverFallback(),
 
-                  // Gradient Scrim agar tulisan/tombol tetap terbaca kontras
+                  // Scrim gradien netral agar title & tombol tetap kontras tinggi
                   DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Colors.black.withValues(alpha: 0.6),
+                          Colors.black.withValues(alpha: 0.65),
                           Colors.transparent,
-                          AppTheme.background,
+                          AppColors.bg,
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        stops: const [0.0, 0.5, 1.0],
+                        stops: const [0.0, 0.45, 1.0],
                       ),
                     ),
                   ),
@@ -157,33 +164,37 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
           // ── Konten Detail ────────────────────────────────────
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl,
+                vertical: AppSpacing.md,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Judul Game
                   Text(
                     _game.judul,
-                    style: const TextStyle(
-                      color: AppTheme.textPrimary,
-                      fontSize: 24,
+                    style: AppTypography.displayMedium.copyWith(
                       fontWeight: FontWeight.bold,
                       height: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: AppSpacing.md),
 
-                  // Rating dan Tanggal Rilis
+                  // Rating dan Tanggal Rilis Badges
                   Row(
                     children: [
                       // Rating Card
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.xs + 2,
+                        ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEAB308).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
+                          color: AppColors.ratingStar.withValues(alpha: 0.15),
+                          borderRadius: AppRadius.fullBorderRadius,
                           border: Border.all(
-                            color: const Color(0xFFEAB308).withValues(alpha: 0.3),
+                            color: AppColors.ratingStar.withValues(alpha: 0.35),
                           ),
                         ),
                         child: Row(
@@ -191,53 +202,53 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                           children: [
                             const Icon(
                               Icons.star_rounded,
-                              size: 18,
-                              color: Color(0xFFFACC15),
+                              size: 16,
+                              color: AppColors.ratingStar,
                             ),
-                            const SizedBox(width: 5),
+                            const SizedBox(width: AppSpacing.xs),
                             Text(
-                              _game.rating.toStringAsFixed(2),
-                              style: const TextStyle(
-                                fontSize: 14,
+                              _game.rating.toStringAsFixed(1),
+                              style: AppTypography.labelMedium.copyWith(
+                                color: AppColors.ratingStar,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFFFACC15),
                               ),
                             ),
-                            const Text(
+                            Text(
                               ' / 5.0',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.textMuted,
+                              style: AppTypography.labelSmall.copyWith(
+                                color: AppColors.textMuted,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppSpacing.md),
 
                       // Tanggal Rilis Badge
                       if (_game.tanggalRilis != null && _game.tanggalRilis!.isNotEmpty)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.xs + 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: AppTheme.surfaceElevated,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppTheme.border),
+                            color: AppColors.surfaceElevated,
+                            borderRadius: AppRadius.fullBorderRadius,
+                            border: Border.all(color: AppColors.border),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(
                                 Icons.calendar_today_rounded,
-                                size: 14,
-                                color: AppTheme.textSecondary,
+                                size: 13,
+                                color: AppColors.textSecondary,
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: AppSpacing.xs + 2),
                               Text(
                                 _game.tanggalRilis!,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppTheme.textPrimary,
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.textPrimary,
                                 ),
                               ),
                             ],
@@ -245,45 +256,43 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: AppSpacing.xl),
 
                   // ── Tombol Status Library ───────────────────────
                   _buildLibraryActionButton(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.xxl),
 
                   // ── Section: Genre ─────────────────────────────
                   if (_game.genres.isNotEmpty || _game.genre.isNotEmpty) ...[
-                    const Text(
+                    Text(
                       'Genre',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textSecondary,
-                        letterSpacing: 0.5,
+                      style: AppTypography.titleSmall.copyWith(
+                        color: AppColors.textSecondary,
+                        letterSpacing: 0.2,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
                       children: (_game.genres.isNotEmpty
                               ? _game.genres
                               : _game.genre.split(',').map((e) => e.trim()))
                           .map(
                             (g) => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md,
+                                vertical: AppSpacing.xs + 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: AppTheme.primary.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: AppTheme.primaryAccent.withValues(alpha: 0.35),
-                                ),
+                                color: AppColors.surfaceElevated,
+                                borderRadius: AppRadius.fullBorderRadius,
+                                border: Border.all(color: AppColors.border),
                               ),
                               child: Text(
                                 g,
-                                style: const TextStyle(
-                                  color: AppTheme.textPrimary,
-                                  fontSize: 12,
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.textPrimary,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -291,68 +300,71 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                           )
                           .toList(),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppSpacing.xl),
                   ],
 
                   // ── Section: Platform ──────────────────────────
                   if (_game.platforms.isNotEmpty || _game.platform.isNotEmpty) ...[
-                    const Text(
+                    Text(
                       'Platform',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textSecondary,
-                        letterSpacing: 0.5,
+                      style: AppTypography.titleSmall.copyWith(
+                        color: AppColors.textSecondary,
+                        letterSpacing: 0.2,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
                       children: (_game.platforms.isNotEmpty
                               ? _game.platforms
                               : _game.platform.split(',').map((e) => e.trim()))
                           .map(
                             (p) => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md,
+                                vertical: AppSpacing.xs + 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: AppTheme.surfaceElevated,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: AppTheme.border),
+                                color: AppColors.surfaceElevated,
+                                borderRadius: AppRadius.fullBorderRadius,
+                                border: Border.all(color: AppColors.border),
                               ),
                               child: Text(
                                 p,
-                                style: const TextStyle(
-                                  color: AppTheme.textSecondary,
-                                  fontSize: 12,
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.textSecondary,
                                 ),
                               ),
                             ),
                           )
                           .toList(),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: AppSpacing.xl),
                   ],
 
                   // ── Section: Deskripsi ─────────────────────────
-                  const Text(
+                  Text(
                     'Tentang Game',
-                    style: TextStyle(
-                      fontSize: 16,
+                    style: AppTypography.titleMedium.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
+                      color: AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: AppSpacing.sm),
 
                   if (_isLoadingDetail)
                     const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24.0),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
-                        ),
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppSkeletonBox(width: double.infinity, height: 14),
+                          SizedBox(height: 8),
+                          AppSkeletonBox(width: double.infinity, height: 14),
+                          SizedBox(height: 8),
+                          AppSkeletonBox(width: 220, height: 14),
+                        ],
                       ),
                     )
                   else
@@ -367,14 +379,13 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                           overflow: _isDescriptionExpanded
                               ? TextOverflow.visible
                               : TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 14,
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
                             height: 1.6,
                           ),
                         ),
                         if (_game.deskripsi != null && _game.deskripsi!.length > 200) ...[
-                          const SizedBox(height: 6),
+                          const SizedBox(height: AppSpacing.sm),
                           GestureDetector(
                             onTap: () {
                               setState(() {
@@ -382,10 +393,11 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                               });
                             },
                             child: Text(
-                              _isDescriptionExpanded ? 'Sembunyikan' : 'Baca selengkapnya',
-                              style: const TextStyle(
-                                color: AppTheme.primaryAccent,
-                                fontSize: 13,
+                              _isDescriptionExpanded
+                                  ? 'Sembunyikan'
+                                  : 'Baca selengkapnya',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: AppColors.primaryLight,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -394,11 +406,11 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                       ],
                     ),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: AppSpacing.xxl),
 
                   // ── Atribusi RAWG dengan link aktif ────────────
-                  const RawgAttribution(),
-                  const SizedBox(height: 16),
+                  const AppRawgAttribution(),
+                  const SizedBox(height: AppSpacing.xl),
                 ],
               ),
             ),
@@ -412,85 +424,75 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
     final status = _game.libraryStatus;
 
     if (status == null) {
-      // Game belum ada di library
-      return SizedBox(
-        width: double.infinity,
+      // Game belum ada di library: Tampilkan tombol pill primer
+      return AppButton(
+        text: 'Tambah ke Library',
+        icon: Icons.bookmark_add_outlined,
+        onPressed: _openLibraryForm,
+        variant: AppButtonVariant.primary,
         height: 50,
-        child: ElevatedButton.icon(
-          onPressed: _openLibraryForm,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          icon: const Icon(Icons.bookmark_add_outlined, size: 20, color: Colors.white),
-          label: const Text(
-            'Tambah ke Library',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ),
       );
     }
 
-    // Game sudah ada di library: tampilkan status dan tombol kelola
-    final Color statusColor = LibraryStatusHelper.getStatusColor(status);
+    // Game sudah ada di library: kartu interaktif dengan status badge
+    final Color statusColor = AppStatusHelper.getStatusColor(status);
 
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surfaceElevated,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: statusColor.withValues(alpha: 0.4), width: 1.2),
+        color: AppColors.surface,
+        borderRadius: AppRadius.lgBorderRadius,
+        border: Border.all(
+          color: statusColor.withValues(alpha: 0.4),
+          width: 1.2,
+        ),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: AppRadius.lgBorderRadius,
           onTap: _openLibraryForm,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md,
+            ),
             child: Row(
               children: [
-                LibraryStatusBadge(status: status),
-                const SizedBox(width: 14),
-                const Expanded(
+                AppStatusChip(status: status, compact: true),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Tersimpan di Library',
-                        style: TextStyle(
-                          fontSize: 13,
+                        style: AppTypography.labelMedium.copyWith(
+                          color: AppColors.textPrimary,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimary,
                         ),
                       ),
-                      SizedBox(height: 2),
+                      const SizedBox(height: 2),
                       Text(
                         'Ketuk untuk ubah status atau catatan',
-                        style: TextStyle(
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.textMuted,
                           fontSize: 11,
-                          color: AppTheme.textMuted,
                         ),
                       ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(AppSpacing.sm),
                   decoration: BoxDecoration(
-                    color: AppTheme.surface,
+                    color: AppColors.surfaceElevated,
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppTheme.border),
+                    border: Border.all(color: AppColors.border),
                   ),
                   child: const Icon(
                     Icons.edit_outlined,
                     size: 16,
-                    color: AppTheme.primaryAccent,
+                    color: AppColors.primaryLight,
                   ),
                 ),
               ],
@@ -503,11 +505,11 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
 
   Widget _buildCoverFallback() {
     return Container(
-      color: AppTheme.surfaceElevated,
+      color: AppColors.surfaceElevated,
       child: const Center(
         child: Icon(
           Icons.sports_esports_rounded,
-          color: AppTheme.textMuted,
+          color: AppColors.textMuted,
           size: 64,
         ),
       ),

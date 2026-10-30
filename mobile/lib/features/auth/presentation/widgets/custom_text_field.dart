@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_text_field.dart';
 
+/// Adapter CustomTextField yang mendelegasikan ke AppTextField terpusat.
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
@@ -29,40 +30,17 @@ class CustomTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppTheme.textSecondary,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: controller,
-          obscureText: obscureText,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          onFieldSubmitted: onFieldSubmitted,
-          validator: validator,
-          style: const TextStyle(
-            color: AppTheme.textPrimary,
-            fontSize: 14,
-          ),
-          decoration: InputDecoration(
-            hintText: hint,
-            prefixIcon: Icon(
-              prefixIcon,
-              color: AppTheme.primaryAccent,
-              size: 20,
-            ),
-            suffixIcon: suffixIcon,
-          ),
-        ),
-      ],
+    return AppTextField(
+      controller: controller,
+      label: label,
+      hint: hint,
+      prefixIcon: prefixIcon,
+      suffixIcon: suffixIcon,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      validator: validator,
+      textInputAction: textInputAction,
+      onFieldSubmitted: onFieldSubmitted,
     );
   }
 }

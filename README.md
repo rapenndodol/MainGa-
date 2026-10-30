@@ -388,7 +388,64 @@ Tahap 3 mengimplementasikan fitur pengelolaan koleksi dan backlog bermain game m
 
 ---
 
-## 🚀 Cara Menjalankan & Menguji Fitur Tahap 3
+## 🎨 Desain UI — Redesain Total Identitas Visual (Warm Obsidian & Coral Terracotta)
+
+Sebelum melanjutkan ke Tahap 4 (Wishlist & Price Tracker), aplikasi **MainGa?** telah melalui redesain antarmuka total. Identitas visual lama yang bernuansa gradient ungu-indigo generik telah digantikan secara penuh dengan sistem visual baru yang diturunkan dari referensi desain studio game modern (`docs/ui-reference/reference.jpg`), dirancang dengan standar anti-slop dari skill `design-taste-frontend`.
+
+### 1. Ringkasan Design System
+
+- **Filosofi Visual**: *Warm Obsidian & Crimson Terracotta Gaming Suite*. Menggunakan kanvas gelap dengan saturasi hangat (deep black-cherry obsidian `#140C0F`), bertingkat secara elegan (*tone steps*) tanpa efek glassmorphism murahan atau gradient neon yang berlebihan.
+- **Single Source of Truth (`lib/core/theme/`)**:
+  - `app_colors.dart`: Seluruh token warna (`bg`, `surface`, `surfaceElevated`, `primary`, `secondary`, `textPrimary`, `textSecondary`, `status*`). Tidak ada warna yang di-hardcode di layar atau widget.
+  - `app_radius.dart`: Skala radius komponen terukur (`sm: 8.0`, `md: 14.0`, `lg: 20.0`, `xl: 24.0`, `full: 999.0`).
+  - `app_spacing.dart`: Skala jarak konsisten (`xs: 4`, `sm: 8`, `md: 12`, `lg: 16`, `xl: 20`, `xxl: 28`).
+  - `app_typography.dart`: Tipografi modern geometris berbasis **Plus Jakarta Sans** (Google Fonts) dengan kontras bobot tegas antara display, title, body, dan micro-label.
+  - `app_theme.dart`: Konfigurasi global `ThemeData` terpadu untuk tombol, input form, card, bottom sheet, dialog, dan app bar.
+- **Komponen Bersama (`lib/core/widgets/`)**:
+  - `AppButton`: Tombol pill (`radius: 999dp`, tinggi minimal 50dp) dengan varian primer, sekunder, outline, dan destruktif, terintegrasi indikator loading.
+  - `AppTextField`: Input rounded dengan batas fokus `#E14B44` dan latar `#1A1014`.
+  - `AppGameCard`: Kartu game konsisten dengan cover rounded (`14dp`), rating bintang warm amber, genre, tahun rilis, dan penanda detail.
+  - `AppStatusChip`: Chip status bermain dengan warna tematik dan ikon representatif tanpa emoji.
+  - `AppSkeletonBox`, `AppGameCardSkeleton`, `AppListSkeleton`: Animasi pulse shimmer untuk indikator pemuatan data (bukan sekadar spinner polos).
+  - `AppEmptyState`: Tampilan kosong dengan ikon tematik, judul tebal, deskripsi komunikatif, dan tombol aksi pemulihan.
+  - `AppErrorState`: Tampilan galat komunikatif dengan tombol coba lagi.
+  - `AppBadge`: Komponen badge serbaguna untuk rating dan kategori.
+  - `AppHeader`: App bar standar dengan back button yang rapi dan konsisten.
+  - `AppRawgAttribution`: Atribusi resmi RAWG.io dengan tautan aktif yang menyatu dengan estetika warm dark.
+
+### 2. Daftar Keputusan Desain
+
+1. **Eliminasi Gradient Ungu & Indigo**: Seluruh gradien ungu lama pada tombol, latar belakang, dan card telah dihapus total. Warna primer digantikan oleh **Coral Crimson** (`#E14B44`) yang dinamis dan berfokus pada aksi utama.
+2. **Elevasi Berdasarkan Tone Steps**: Memisahkan bidang secara visual murni melalui tingkatan tone warna (`#140C0F` -> `#1E1216` -> `#29171E`), bukan menggunakan border tipis yang ramai atau bayangan neon.
+3. **Bentuk Pill Ergonomis**: Selaras dengan referensi, tombol utama, input pencarian, chip filter, dan indikator navigasi mengadopsi bentuk pill penuh yang ramah sentuhan (memenuhi standar aksesibilitas area sentuh minimal 48dp).
+4. **Floating Dock Navigation Bar**: Bar navigasi 4 tab melayang di atas konten dengan sudut membulat penuh (`32dp`), di mana tab aktif diberi penanda pill merah koral `#E14B44` dengan ikon dan label putih yang menonjol.
+5. **State Interaktif yang Proper**: Seluruh daftar (Jelajah dan Library) kini menampilkan skeleton shimmer saat memuat data, bukan spinner mentah. Layar kosong menyajikan instruksi ramah dengan tombol reset filter atau panduan eksplorasi.
+6. **Hierarki Konten Detail Game**: Cover game dijadikan elemen visual dominan dengan overlay gradient scrim netral agar judul dan rating tetap terbaca dengan kontras sempurna di semua resolusi layar.
+
+---
+
+## 🚀 Cara Menjalankan & Menguji Aplikasi
+
+### 1. Backend (Laravel)
+```bash
+cd backend
+php artisan test
+php artisan serve --host=0.0.0.0 --port=8000
+```
+
+### 2. Mobile (Flutter)
+```bash
+cd mobile
+flutter pub get
+flutter analyze
+flutter test
+flutter run
+```
+*Hasil pengujian saat ini: `flutter analyze` 0 issues (bersih), dan `flutter test` 21 tests passed (100% lulus).*
+
+---
+
+## 📝 Catatan Keputusan Desain & Implementasi Tahap 3
 
 ### 1. Backend (Laravel)
 1. Masuk ke folder backend:
