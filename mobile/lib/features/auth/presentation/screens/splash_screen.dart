@@ -23,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkAuth() async {
-    // Beri sedikit jeda visual splash
+    // Jeda visual splash
     await Future.delayed(const Duration(milliseconds: 600));
 
     final token = await TokenStorage.getToken();
@@ -31,14 +31,12 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     if (token != null && token.isNotEmpty) {
-      // Coba verifikasi dengan user lokal atau fetch dari backend
       final userMap = await TokenStorage.getUser();
       UserModel? user;
       if (userMap != null) {
         user = UserModel.fromJson(userMap);
       }
 
-      // Verifikasi token masih berlaku di backend secara asynchronous
       _authDataSource.getProfile(token).then((remoteUser) {
         if (remoteUser != null) {
           TokenStorage.saveUser(remoteUser.toJson());
@@ -63,34 +61,48 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: AppTheme.background,
+    return Scaffold(
+      backgroundColor: AppColors.bg,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.sports_esports_rounded,
-              size: 64,
-              color: AppTheme.primaryAccent,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'MainGa?',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-                letterSpacing: 1.0,
+            Container(
+              width: 84,
+              height: 84,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.surfaceElevated,
+                border: Border.all(color: AppColors.border, width: 1.5),
+              ),
+              child: const Icon(
+                Icons.sports_esports_rounded,
+                size: 44,
+                color: AppColors.primary,
               ),
             ),
-            SizedBox(height: 24),
-            SizedBox(
-              width: 24,
-              height: 24,
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'MainGa?',
+              style: AppTypography.displayLarge.copyWith(
+                color: AppColors.textPrimary,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Game Collection & Price Tracker',
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+            const SizedBox(
+              width: 22,
+              height: 22,
               child: CircularProgressIndicator(
-                strokeWidth: 2.5,
-                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                strokeWidth: 2.2,
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
             ),
           ],

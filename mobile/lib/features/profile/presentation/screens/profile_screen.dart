@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/storage/token_storage.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_button.dart';
 import '../../../auth/data/datasources/auth_remote_data_source.dart';
 import '../../../auth/data/models/user_model.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
@@ -52,31 +53,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: AppColors.surfaceElevated,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppTheme.border),
+          borderRadius: AppRadius.lgBorderRadius,
+          side: const BorderSide(color: AppColors.border),
         ),
-        title: const Text(
+        title: Text(
           'Konfirmasi Logout',
-          style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
+          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
         ),
-        content: const Text(
+        content: Text(
           'Apakah kamu yakin ingin keluar dari akun MainGa??',
-          style: TextStyle(color: AppTheme.textSecondary),
+          style: AppTypography.bodyMedium,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal', style: TextStyle(color: AppTheme.textMuted)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.error,
-              minimumSize: const Size(90, 40),
+            child: Text(
+              'Batal',
+              style: AppTypography.labelMedium.copyWith(color: AppColors.textMuted),
             ),
+          ),
+          AppButton(
+            text: 'Keluar',
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Keluar', style: TextStyle(color: Colors.white)),
+            variant: AppButtonVariant.destructive,
+            height: 40,
+            width: 90,
           ),
         ],
       ),
@@ -107,95 +110,84 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final email = _currentUser?.email ?? 'gamer@mainga.com';
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: const Text('Profil Pengguna'),
+        title: Text(
+          'Profil Pengguna',
+          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+        ),
         centerTitle: false,
         automaticallyImplyLeading: false,
+        backgroundColor: AppColors.bg,
+        elevation: 0,
+        scrolledUnderElevation: 0,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(
             children: [
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.sm),
 
               // ── Kartu Profil ──────────────────────────────────
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.xxl,
+                ),
                 decoration: BoxDecoration(
-                  color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppTheme.border, width: 1),
+                  color: AppColors.surface,
+                  borderRadius: AppRadius.xlBorderRadius,
+                  border: Border.all(color: AppColors.border, width: 1),
                 ),
                 child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: AppTheme.primary.withValues(alpha: 0.2),
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.surfaceElevated,
+                        border: Border.all(color: AppColors.primary, width: 2),
+                      ),
+                      alignment: Alignment.center,
                       child: Text(
                         nama.isNotEmpty ? nama[0].toUpperCase() : 'G',
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryAccent,
+                        style: AppTypography.displayLarge.copyWith(
+                          color: AppColors.primary,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.lg),
                     Text(
                       nama,
-                      style: const TextStyle(
-                        fontSize: 20,
+                      style: AppTypography.titleLarge.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimary,
+                        color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       email,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: AppTheme.textSecondary,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.xxl),
 
               // ── Tombol Logout ─────────────────────────────────
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.error.withValues(alpha: 0.15),
-                  foregroundColor: AppTheme.error,
-                  side: BorderSide(color: AppTheme.error.withValues(alpha: 0.4), width: 1),
-                  elevation: 0,
-                  minimumSize: const Size.fromHeight(50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
+              AppButton(
+                text: _isLoggingOut ? 'Sedang keluar...' : 'Keluar dari Akun',
+                icon: Icons.logout_rounded,
                 onPressed: _isLoggingOut ? null : _handleLogout,
-                icon: _isLoggingOut
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.error),
-                        ),
-                      )
-                    : const Icon(Icons.logout_rounded, size: 20),
-                label: Text(
-                  _isLoggingOut ? 'Sedang keluar...' : 'Keluar dari Akun',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                isLoading: _isLoggingOut,
+                variant: AppButtonVariant.destructive,
+                height: 52,
               ),
             ],
           ),

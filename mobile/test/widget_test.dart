@@ -15,6 +15,10 @@ import 'package:mobile/features/library/presentation/screens/library_screen.dart
 import 'package:mobile/features/library/presentation/widgets/library_game_card.dart';
 import 'package:mobile/features/library/presentation/widgets/library_status_badge.dart';
 import 'package:mobile/features/wishlist/presentation/screens/wishlist_screen.dart';
+import 'package:mobile/core/widgets/app_badge.dart';
+import 'package:mobile/core/widgets/app_button.dart';
+import 'package:mobile/core/widgets/app_empty_state.dart';
+import 'package:mobile/core/widgets/app_error_state.dart';
 import 'package:mobile/main.dart';
 
 class TestWrapper extends StatelessWidget {
@@ -378,6 +382,83 @@ void main() {
       expect(find.text('9/10'), findsOneWidget);
       expect(find.text('42.5 jam'), findsOneWidget);
       expect(find.text('"Gameplay sangat seru."'), findsOneWidget);
+    });
+
+    // ── Design System Shared Widgets Tests ────────────────────
+    testWidgets('AppButton renders text and responds to tap', (WidgetTester tester) async {
+      bool tapped = false;
+      await tester.pumpWidget(
+        TestWrapper(
+          child: Scaffold(
+            body: AppButton(
+              text: 'Mulai Bermain',
+              onPressed: () => tapped = true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Mulai Bermain'), findsOneWidget);
+      await tester.tap(find.text('Mulai Bermain'));
+      expect(tapped, true);
+    });
+
+    testWidgets('AppEmptyState renders icon, title, and optional action', (WidgetTester tester) async {
+      bool actionClicked = false;
+      await tester.pumpWidget(
+        TestWrapper(
+          child: Scaffold(
+            body: AppEmptyState(
+              icon: Icons.gamepad_rounded,
+              title: 'Koleksi Kosong',
+              description: 'Kamu belum menambahkan game apa pun.',
+              actionText: 'Jelajah Sekarang',
+              onAction: () => actionClicked = true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Koleksi Kosong'), findsOneWidget);
+      expect(find.text('Kamu belum menambahkan game apa pun.'), findsOneWidget);
+      expect(find.text('Jelajah Sekarang'), findsOneWidget);
+
+      await tester.tap(find.text('Jelajah Sekarang'));
+      expect(actionClicked, true);
+    });
+
+    testWidgets('AppErrorState renders error message and retry button', (WidgetTester tester) async {
+      bool retried = false;
+      await tester.pumpWidget(
+        TestWrapper(
+          child: Scaffold(
+            body: AppErrorState(
+              message: 'Gagal terhubung ke server',
+              onRetry: () => retried = true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Terjadi Kendala'), findsOneWidget);
+      expect(find.text('Gagal terhubung ke server'), findsOneWidget);
+      expect(find.text('Coba Lagi'), findsOneWidget);
+
+      await tester.tap(find.text('Coba Lagi'));
+      expect(retried, true);
+    });
+
+    testWidgets('AppBadge.rating renders rating score with star icon', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        TestWrapper(
+          child: Scaffold(
+            body: AppBadge.rating(4.8),
+          ),
+        ),
+      );
+
+      expect(find.text('4.8'), findsOneWidget);
+      expect(find.byIcon(Icons.star_rounded), findsOneWidget);
     });
   });
 }

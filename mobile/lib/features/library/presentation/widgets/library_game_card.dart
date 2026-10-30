@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_status_chip.dart';
 import '../../data/models/library_entry_model.dart';
 import 'library_entry_sheet.dart';
-import 'library_status_badge.dart';
 
 class LibraryGameCard extends StatelessWidget {
   final LibraryEntryModel entry;
@@ -17,16 +17,16 @@ class LibraryGameCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.border, width: 1),
+        color: AppColors.surface,
+        borderRadius: AppRadius.lgBorderRadius,
+        border: Border.all(color: AppColors.border, width: 1),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadius.lgBorderRadius,
           onTap: () async {
             final changed = await LibraryEntrySheet.show(context, entry: entry);
             if (changed == true && onUpdated != null) {
@@ -34,16 +34,16 @@ class LibraryGameCard extends StatelessWidget {
             }
           },
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppSpacing.md),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── Cover Image ───────────────────────────────────
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: AppRadius.mdBorderRadius,
                   child: SizedBox(
-                    width: 76,
-                    height: 104,
+                    width: 78,
+                    height: 106,
                     child: entry.coverUrl != null && entry.coverUrl!.isNotEmpty
                         ? Image.network(
                             entry.coverUrl!,
@@ -53,7 +53,7 @@ class LibraryGameCard extends StatelessWidget {
                         : _buildFallbackCover(),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: AppSpacing.md),
 
                 // ── Content Info ──────────────────────────────────
                 Expanded(
@@ -64,45 +64,46 @@ class LibraryGameCard extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          LibraryStatusBadge(status: entry.status, compact: true),
-                          Icon(
+                          AppStatusChip(status: entry.status, compact: true),
+                          const Icon(
                             Icons.tune_rounded,
                             size: 16,
-                            color: AppTheme.textMuted.withValues(alpha: 0.8),
+                            color: AppColors.textMuted,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: AppSpacing.sm),
 
                       // Judul Game
                       Text(
                         entry.judul,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 15,
+                        style: AppTypography.titleMedium.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimary,
                           height: 1.25,
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: AppSpacing.md),
 
                       // Metric Row: Rating Pribadi & Jam Main
                       Row(
                         children: [
                           // Rating Pribadi
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: AppSpacing.xs,
+                            ),
                             decoration: BoxDecoration(
                               color: entry.ratingPribadi != null
-                                  ? const Color(0xFFEAB308).withValues(alpha: 0.12)
-                                  : AppTheme.surfaceElevated,
-                              borderRadius: BorderRadius.circular(6),
+                                  ? AppColors.ratingStar.withValues(alpha: 0.15)
+                                  : AppColors.surfaceElevated,
+                              borderRadius: AppRadius.fullBorderRadius,
                               border: Border.all(
                                 color: entry.ratingPribadi != null
-                                    ? const Color(0xFFEAB308).withValues(alpha: 0.25)
-                                    : AppTheme.border,
+                                    ? AppColors.ratingStar.withValues(alpha: 0.35)
+                                    : AppColors.border,
                               ),
                             ),
                             child: Row(
@@ -110,36 +111,38 @@ class LibraryGameCard extends StatelessWidget {
                               children: [
                                 Icon(
                                   Icons.star_rounded,
-                                  size: 14,
+                                  size: 13,
                                   color: entry.ratingPribadi != null
-                                      ? const Color(0xFFFACC15)
-                                      : AppTheme.textMuted,
+                                      ? AppColors.ratingStar
+                                      : AppColors.textMuted,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   entry.ratingPribadi != null
                                       ? '${entry.ratingPribadi}/10'
                                       : '-',
-                                  style: TextStyle(
-                                    fontSize: 11,
+                                  style: AppTypography.labelSmall.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: entry.ratingPribadi != null
-                                      ? const Color(0xFFFACC15)
-                                      : AppTheme.textMuted,
+                                        ? AppColors.ratingStar
+                                        : AppColors.textMuted,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: AppSpacing.sm),
 
                           // Jam Main
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: AppSpacing.xs,
+                            ),
                             decoration: BoxDecoration(
-                              color: AppTheme.surfaceElevated,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: AppTheme.border),
+                              color: AppColors.surfaceElevated,
+                              borderRadius: AppRadius.fullBorderRadius,
+                              border: Border.all(color: AppColors.border),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -147,17 +150,16 @@ class LibraryGameCard extends StatelessWidget {
                                 const Icon(
                                   Icons.timer_outlined,
                                   size: 13,
-                                  color: AppTheme.textSecondary,
+                                  color: AppColors.textSecondary,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   entry.jamMain % 1 == 0
                                       ? '${entry.jamMain.toInt()} jam'
                                       : '${entry.jamMain.toStringAsFixed(1)} jam',
-                                  style: const TextStyle(
-                                    fontSize: 11,
+                                  style: AppTypography.labelSmall.copyWith(
                                     fontWeight: FontWeight.w600,
-                                    color: AppTheme.textPrimary,
+                                    color: AppColors.textPrimary,
                                   ),
                                 ),
                               ],
@@ -166,22 +168,21 @@ class LibraryGameCard extends StatelessWidget {
                         ],
                       ),
 
-                      // Tanggal Tamat (jika Tamat)
+                      // Tanggal Tamat (jika status Tamat)
                       if (entry.status == 'Tamat' && entry.tanggalTamat != null) ...[
-                        const SizedBox(height: 6),
+                        const SizedBox(height: AppSpacing.xs + 2),
                         Row(
                           children: [
                             const Icon(
-                              Icons.check_circle_outline_rounded,
+                              Icons.check_circle_rounded,
                               size: 13,
-                              color: Color(0xFF10B981),
+                              color: AppColors.success,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               'Tamat pada ${entry.tanggalTamat}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF10B981),
+                              style: AppTypography.labelSmall.copyWith(
+                                color: AppColors.success,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -191,15 +192,14 @@ class LibraryGameCard extends StatelessWidget {
 
                       // Catatan Preview jika ada
                       if (entry.catatan != null && entry.catatan!.trim().isNotEmpty) ...[
-                        const SizedBox(height: 6),
+                        const SizedBox(height: AppSpacing.xs + 2),
                         Text(
                           '"${entry.catatan!.trim()}"',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 11,
+                          style: AppTypography.bodySmall.copyWith(
                             fontStyle: FontStyle.italic,
-                            color: AppTheme.textMuted,
+                            color: AppColors.textMuted,
                           ),
                         ),
                       ],
@@ -216,11 +216,11 @@ class LibraryGameCard extends StatelessWidget {
 
   Widget _buildFallbackCover() {
     return Container(
-      color: AppTheme.surfaceElevated,
+      color: AppColors.surfaceElevated,
       child: const Center(
         child: Icon(
           Icons.sports_esports_rounded,
-          color: AppTheme.textMuted,
+          color: AppColors.textMuted,
           size: 28,
         ),
       ),

@@ -6,6 +6,7 @@ import '../../../library/presentation/screens/library_screen.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
 import '../../../wishlist/presentation/screens/wishlist_screen.dart';
 
+/// Screen utama yang menampung 4 tab dengan Floating Navigation Bar modern.
 class HomeScreen extends StatefulWidget {
   final UserModel? user;
   final int initialIndex;
@@ -39,8 +40,8 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      extendBody: true, // Untuk mendukung floating bottom navigation bar
+      backgroundColor: AppColors.bg,
+      extendBody: true, // Mendukung floating navigation dock di atas konten
       body: IndexedStack(
         index: _currentIndex,
         children: screens,
@@ -51,17 +52,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildFloatingNavBar() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(18, 0, 18, 16),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      margin: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceElevated.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.border, width: 1.2),
+        color: AppColors.surfaceElevated.withValues(alpha: 0.96),
+        borderRadius: AppRadius.fullBorderRadius,
+        border: Border.all(color: AppColors.border, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -103,36 +104,37 @@ class _HomeScreenState extends State<HomeScreen> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: AppRadius.fullBorderRadius,
         onTap: () {
           setState(() {
             _currentIndex = index;
           });
         },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppTheme.primary.withValues(alpha: 0.18)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
+          duration: const Duration(milliseconds: 220),
+          padding: EdgeInsets.symmetric(
+            horizontal: isSelected ? AppSpacing.md : AppSpacing.sm + 2,
+            vertical: AppSpacing.xs + 2,
           ),
-          child: Column(
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary : Colors.transparent,
+            borderRadius: AppRadius.fullBorderRadius,
+          ),
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 icon,
-                color: isSelected ? AppTheme.primaryAccent : AppTheme.textMuted,
-                size: 22,
+                color: isSelected ? Colors.white : AppColors.textMuted,
+                size: 20,
               ),
-              const SizedBox(height: 3),
+              const SizedBox(width: AppSpacing.xs),
               Text(
                 label,
-                style: TextStyle(
+                style: AppTypography.labelSmall.copyWith(
                   fontSize: 11,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? AppTheme.primaryAccent : AppTheme.textMuted,
+                  color: isSelected ? Colors.white : AppColors.textMuted,
                 ),
               ),
             ],

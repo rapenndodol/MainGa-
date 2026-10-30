@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../../core/storage/token_storage.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/app_text_field.dart';
 import '../../../home/presentation/screens/home_screen.dart';
 import '../../data/datasources/auth_remote_data_source.dart';
-import '../widgets/custom_text_field.dart';
-import '../widgets/primary_button.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -81,115 +81,122 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.bg,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xxl,
+              vertical: AppSpacing.xl,
+            ),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo & Header
+                  // ── Logo & Header Visual ─────────────────────────
                   Center(
                     child: Container(
-                      padding: const EdgeInsets.all(16),
+                      width: 72,
+                      height: 72,
                       decoration: BoxDecoration(
+                        color: AppColors.surfaceElevated,
                         shape: BoxShape.circle,
-                        color: AppTheme.primary.withValues(alpha: 0.15),
-                        border: Border.all(
-                          color: AppTheme.primaryAccent.withValues(alpha: 0.4),
-                          width: 1.5,
-                        ),
+                        border: Border.all(color: AppColors.border, width: 1.5),
                       ),
                       child: const Icon(
                         Icons.sports_esports_rounded,
-                        size: 48,
-                        color: AppTheme.primaryAccent,
+                        size: 38,
+                        color: AppColors.primary,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
+                  const SizedBox(height: AppSpacing.lg),
+                  Text(
                     'MainGa?',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
-                      letterSpacing: 0.5,
+                    style: AppTypography.displayLarge.copyWith(
+                      color: AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  const Text(
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
                     'Kelola koleksi & lacak diskon game impianmu',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppTheme.textSecondary,
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: AppSpacing.xxl),
 
-                  // Error Message Banner
+                  // ── Error Message Banner ─────────────────────────
                   if (_errorMessage != null) ...[
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                        vertical: AppSpacing.md,
+                      ),
                       decoration: BoxDecoration(
-                        color: AppTheme.error.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppTheme.error.withValues(alpha: 0.4)),
+                        color: AppColors.error.withValues(alpha: 0.12),
+                        borderRadius: AppRadius.mdBorderRadius,
+                        border: Border.all(
+                          color: AppColors.error.withValues(alpha: 0.35),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline, color: AppTheme.error, size: 20),
-                          const SizedBox(width: 10),
+                          const Icon(Icons.error_outline_rounded,
+                              color: AppColors.error, size: 20),
+                          const SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: Text(
                               _errorMessage!,
-                              style: const TextStyle(
-                                color: AppTheme.error,
-                                fontSize: 13,
+                              style: AppTypography.bodySmall.copyWith(
+                                color: AppColors.error,
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: AppSpacing.lg),
                   ],
 
-                  // Email Field
-                  CustomTextField(
+                  // ── Input Fields ─────────────────────────────────
+                  AppTextField(
                     controller: _emailController,
                     label: 'Email',
-                    hint: 'nama@example.com',
-                    prefixIcon: Icons.email_outlined,
+                    hint: 'masukkan email kamu',
+                    prefixIcon: Icons.alternate_email_rounded,
                     keyboardType: TextInputType.emailAddress,
                     validator: (val) {
                       if (val == null || val.trim().isEmpty) {
                         return 'Email wajib diisi';
                       }
-                      if (!val.contains('@') || !val.contains('.')) {
+                      final emailRegex =
+                          RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                      if (!emailRegex.hasMatch(val.trim())) {
                         return 'Format email tidak valid';
                       }
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
-
-                  // Password Field
-                  CustomTextField(
+                  const SizedBox(height: AppSpacing.lg),
+                  AppTextField(
                     controller: _passwordController,
                     label: 'Password',
-                    hint: 'Minimal 8 karakter',
-                    prefixIcon: Icons.lock_outline,
+                    hint: 'masukkan password',
+                    prefixIcon: Icons.lock_outline_rounded,
                     obscureText: _obscurePassword,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _handleLogin(),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                        color: AppTheme.textMuted,
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: AppColors.textMuted,
                         size: 20,
                       ),
                       onPressed: () {
@@ -204,29 +211,28 @@ class _LoginScreenState extends State<LoginScreen> {
                       }
                       return null;
                     },
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _handleLogin(),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.xxl),
 
-                  // Submit Button
-                  PrimaryButton(
+                  // ── Tombol Masuk ─────────────────────────────────
+                  AppButton(
                     text: 'Masuk ke MainGa?',
-                    icon: Icons.login_rounded,
-                    isLoading: _isLoading,
                     onPressed: _handleLogin,
+                    isLoading: _isLoading,
+                    icon: Icons.login_rounded,
+                    variant: AppButtonVariant.primary,
+                    height: 52,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.xxl),
 
-                  // Register Link
+                  // ── Redirect ke Halaman Register ─────────────────
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
+                      Text(
                         'Belum punya akun? ',
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 13,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
                         ),
                       ),
                       GestureDetector(
@@ -238,28 +244,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           );
                         },
-                        child: const Text(
+                        child: Text(
                           'Daftar Sekarang',
-                          style: TextStyle(
-                            color: AppTheme.primaryAccent,
-                            fontSize: 13,
+                          style: AppTypography.labelMedium.copyWith(
+                            color: AppColors.primaryLight,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Attribution note
-                  const Center(
-                    child: Text(
-                      'Data by RAWG & CheapShark',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.textMuted,
-                      ),
-                    ),
                   ),
                 ],
               ),

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_empty_state.dart';
+import '../../../../core/widgets/app_error_state.dart';
+import '../../../../core/widgets/app_loading_skeleton.dart';
+import '../../../../core/widgets/app_status_chip.dart';
 import '../../data/datasources/library_remote_data_source.dart';
 import '../../data/models/library_entry_model.dart';
 import '../controllers/library_notifier.dart';
 import '../widgets/library_game_card.dart';
-import '../widgets/library_status_badge.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -139,30 +142,37 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        title: const Text('Library Koleksi'),
+        title: Text(
+          'Library Koleksi',
+          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
+        ),
         centerTitle: false,
         automaticallyImplyLeading: false,
+        backgroundColor: AppColors.bg,
         elevation: 0,
+        scrolledUnderElevation: 0,
         actions: [
           if (!_isLoading && _total > 0)
             Padding(
-              padding: const EdgeInsets.only(right: 16.0),
+              padding: const EdgeInsets.only(right: AppSpacing.lg),
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.xs + 1,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppTheme.surfaceElevated,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.border),
+                    color: AppColors.surfaceElevated,
+                    borderRadius: AppRadius.fullBorderRadius,
+                    border: Border.all(color: AppColors.border),
                   ),
                   child: Text(
                     '$_total game',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.primaryAccent,
+                    style: AppTypography.labelSmall.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryLight,
                     ),
                   ),
                 ),
@@ -175,14 +185,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
           children: [
             // ── Horizontal Filter Chips ────────────────────────
             _buildStatusFilters(),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
 
             // ── Main Content Area ──────────────────────────────
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () => _fetchLibrary(refresh: true),
-                color: AppTheme.primary,
-                backgroundColor: AppTheme.surfaceElevated,
+                color: AppColors.primary,
+                backgroundColor: AppColors.surfaceElevated,
                 child: _buildBody(),
               ),
             ),
@@ -194,40 +204,39 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Widget _buildStatusFilters() {
     return SizedBox(
-      height: 44,
+      height: 42,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         scrollDirection: Axis.horizontal,
         itemCount: _filterOptions.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
         itemBuilder: (context, index) {
           final option = _filterOptions[index];
           final bool isSelected = _selectedStatus == option;
           final Color badgeColor = option == 'Semua'
-              ? AppTheme.primary
-              : LibraryStatusHelper.getStatusColor(option);
+              ? AppColors.primary
+              : AppStatusHelper.getStatusColor(option);
 
           return ChoiceChip(
             label: Text(
               option,
-              style: TextStyle(
-                fontSize: 12,
+              style: AppTypography.labelSmall.copyWith(
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? Colors.white : AppTheme.textSecondary,
+                color: isSelected ? Colors.white : AppColors.textSecondary,
               ),
             ),
             selected: isSelected,
             onSelected: (_) => _onStatusFilterSelected(option),
             selectedColor: badgeColor,
-            backgroundColor: AppTheme.surfaceElevated,
+            backgroundColor: AppColors.surfaceElevated,
             side: BorderSide(
-              color: isSelected ? badgeColor : AppTheme.border,
+              color: isSelected ? badgeColor : AppColors.border,
               width: 1,
             ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: AppRadius.fullBorderRadius,
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             showCheckmark: false,
           );
         },
@@ -236,67 +245,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _buildBody() {
+    // Loading skeleton daripada spinner polos
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(
-          strokeWidth: 2.2,
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
-        ),
-      );
+      return const AppListSkeleton(itemCount: 5);
     }
 
     if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.error.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.error_outline_rounded,
-                  size: 44,
-                  color: AppTheme.error,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Gagal Memuat Library',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: AppTheme.textSecondary,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(
-                onPressed: () => _fetchLibrary(refresh: true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  minimumSize: const Size(140, 44),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Coba Lagi'),
-              ),
-            ],
-          ),
-        ),
+      return AppErrorState(
+        title: 'Gagal Memuat Library',
+        message: _errorMessage!,
+        onRetry: () => _fetchLibrary(refresh: true),
       );
     }
 
@@ -306,19 +264,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 88), // 88 bottom margin untuk floating nav
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xs,
+        AppSpacing.lg,
+        96.0, // Ruang untuk floating bottom dock
+      ),
       itemCount: _entries.length + (_isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == _entries.length) {
           return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16.0),
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
             child: Center(
               child: SizedBox(
-                width: 24,
-                height: 24,
+                width: 22,
+                height: 22,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
               ),
             ),
@@ -337,66 +300,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget _buildEmptyState() {
     final bool isFiltered = _selectedStatus != 'Semua';
 
-    return Center(
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppTheme.primaryAccent.withValues(alpha: 0.25),
-                  width: 1.5,
-                ),
-              ),
-              child: const Icon(
-                Icons.collections_bookmark_rounded,
-                size: 48,
-                color: AppTheme.primaryAccent,
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Belum ada game',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isFiltered
-                  ? 'Belum ada game dengan status "$_selectedStatus" di library pribadimu.'
-                  : 'Koleksi game dan backlog bermainmu akan muncul di sini. Buka tab Jelajah untuk mulai mencari dan menambahkan game.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-                height: 1.5,
-              ),
-            ),
-            if (isFiltered) ...[
-              const SizedBox(height: 18),
-              OutlinedButton(
-                onPressed: () => _onStatusFilterSelected('Semua'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(160, 42),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: const Text('Lihat Semua Status'),
-              ),
-            ],
-          ],
-        ),
-      ),
+    return AppEmptyState(
+      icon: Icons.collections_bookmark_rounded,
+      title: 'Belum ada game',
+      description: isFiltered
+          ? 'Belum ada game dengan status "$_selectedStatus" di library pribadimu.'
+          : 'Koleksi game dan backlog bermainmu akan muncul di sini. Buka tab Jelajah untuk mulai mencari dan menambahkan game.',
+      actionText: isFiltered ? 'Lihat Semua Status' : null,
+      onAction: isFiltered ? () => _onStatusFilterSelected('Semua') : null,
     );
   }
 }

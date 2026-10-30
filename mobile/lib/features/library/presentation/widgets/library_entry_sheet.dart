@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/app_status_chip.dart';
 import '../../../games/data/models/game_model.dart';
 import '../../data/datasources/library_remote_data_source.dart';
 import '../../data/models/library_entry_model.dart';
 import '../controllers/library_notifier.dart';
-import 'library_status_badge.dart';
 
 class LibraryEntrySheet extends StatefulWidget {
   final GameModel? game;
@@ -122,7 +123,7 @@ class _LibraryEntrySheetState extends State<LibraryEntrySheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] ?? 'Entry library diperbarui!'),
-            backgroundColor: AppTheme.success,
+            backgroundColor: AppColors.surfaceElevated,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -131,7 +132,7 @@ class _LibraryEntrySheetState extends State<LibraryEntrySheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] ?? 'Gagal memperbarui entry.'),
-            backgroundColor: AppTheme.error,
+            backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -161,7 +162,7 @@ class _LibraryEntrySheetState extends State<LibraryEntrySheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] ?? 'Game ditambahkan ke library!'),
-            backgroundColor: AppTheme.success,
+            backgroundColor: AppColors.surfaceElevated,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -170,7 +171,7 @@ class _LibraryEntrySheetState extends State<LibraryEntrySheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] ?? 'Gagal menambahkan ke library.'),
-            backgroundColor: AppTheme.error,
+            backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -184,36 +185,33 @@ class _LibraryEntrySheetState extends State<LibraryEntrySheet> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        backgroundColor: AppTheme.surfaceElevated,
+        backgroundColor: AppColors.surfaceElevated,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppTheme.border),
+          borderRadius: AppRadius.lgBorderRadius,
+          side: const BorderSide(color: AppColors.border),
         ),
-        title: const Text(
+        title: Text(
           'Hapus dari Library?',
-          style: TextStyle(
-            color: AppTheme.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
+          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
         ),
         content: Text(
           'Apakah kamu yakin ingin menghapus "$_gameJudul" dari koleksi library kamu?',
-          style: const TextStyle(color: AppTheme.textSecondary),
+          style: AppTypography.bodyMedium,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx, false),
-            child: const Text('Batal', style: TextStyle(color: AppTheme.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.error,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(90, 42),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            child: Text(
+              'Batal',
+              style: AppTypography.labelMedium.copyWith(color: AppColors.textMuted),
             ),
+          ),
+          AppButton(
+            text: 'Hapus',
             onPressed: () => Navigator.pop(dialogCtx, true),
-            child: const Text('Hapus', style: TextStyle(fontWeight: FontWeight.bold)),
+            variant: AppButtonVariant.destructive,
+            height: 40,
+            width: 90,
           ),
         ],
       ),
@@ -234,7 +232,7 @@ class _LibraryEntrySheetState extends State<LibraryEntrySheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Game berhasil dihapus dari library'),
-          backgroundColor: AppTheme.surfaceElevated,
+          backgroundColor: AppColors.surfaceElevated,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -243,7 +241,7 @@ class _LibraryEntrySheetState extends State<LibraryEntrySheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Gagal menghapus game.'),
-          backgroundColor: AppTheme.error,
+          backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -256,19 +254,19 @@ class _LibraryEntrySheetState extends State<LibraryEntrySheet> {
 
     return Container(
       decoration: const BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
         border: Border(
-          top: BorderSide(color: AppTheme.border, width: 1.2),
-          left: BorderSide(color: AppTheme.border, width: 1.2),
-          right: BorderSide(color: AppTheme.border, width: 1.2),
+          top: BorderSide(color: AppColors.border, width: 1.2),
+          left: BorderSide(color: AppColors.border, width: 1.2),
+          right: BorderSide(color: AppColors.border, width: 1.2),
         ),
       ),
       padding: EdgeInsets.only(
-        top: 12,
-        left: 20,
-        right: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        top: AppSpacing.md,
+        left: AppSpacing.xl,
+        right: AppSpacing.xl,
+        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.xxl,
       ),
       child: SafeArea(
         top: false,
@@ -282,176 +280,137 @@ class _LibraryEntrySheetState extends State<LibraryEntrySheet> {
                 // Handle bar
                 Center(
                   child: Container(
-                    width: 40,
+                    width: 36,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: AppTheme.textMuted.withValues(alpha: 0.5),
+                      color: AppColors.textMuted.withValues(alpha: 0.4),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
 
                 // Header Info Game
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: AppRadius.smBorderRadius,
                       child: SizedBox(
-                        width: 52,
-                        height: 68,
+                        width: 50,
+                        height: 66,
                         child: _gameCoverUrl != null && _gameCoverUrl!.isNotEmpty
                             ? Image.network(
                                 _gameCoverUrl!,
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, _, _) => Container(
-                                  color: AppTheme.surfaceElevated,
-                                  child: const Icon(Icons.sports_esports_rounded, color: AppTheme.textMuted),
+                                  color: AppColors.surface,
+                                  child: const Icon(Icons.sports_esports_rounded,
+                                      color: AppColors.textMuted, size: 24),
                                 ),
                               )
                             : Container(
-                                color: AppTheme.surfaceElevated,
-                                child: const Icon(Icons.sports_esports_rounded, color: AppTheme.textMuted),
+                                color: AppColors.surface,
+                                child: const Icon(Icons.sports_esports_rounded,
+                                    color: AppColors.textMuted, size: 24),
                               ),
                       ),
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             isEditing ? 'Kelola di Library' : 'Tambah ke Library',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.primaryAccent,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
+                            style: AppTypography.labelSmall.copyWith(
+                              color: AppColors.primaryLight,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 2),
                           Text(
                             _gameJudul,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 16,
+                            style: AppTypography.titleMedium.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.textPrimary,
                             ),
                           ),
                         ],
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted),
+                      icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                const Divider(color: AppTheme.border, height: 1),
-                const SizedBox(height: 18),
+                const SizedBox(height: AppSpacing.lg),
+                const Divider(color: AppColors.border),
+                const SizedBox(height: AppSpacing.lg),
 
                 // ── Status Selector ───────────────────────────────
-                const Text(
+                Text(
                   'Status Bermain',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textSecondary,
+                  style: AppTypography.titleSmall.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.sm),
                 Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: LibraryStatusHelper.statuses.map((status) {
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: AppStatusHelper.statuses.map((status) {
                     final bool isSelected = _selectedStatus == status;
-                    final Color statusColor = LibraryStatusHelper.getStatusColor(status);
 
-                    return InkWell(
-                      borderRadius: BorderRadius.circular(10),
+                    return AppStatusChip(
+                      status: status,
+                      isSelected: isSelected,
                       onTap: () {
                         setState(() {
                           _selectedStatus = status;
                         });
                       },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? statusColor.withValues(alpha: 0.22)
-                              : AppTheme.surfaceElevated,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: isSelected
-                                ? statusColor
-                                : AppTheme.border,
-                            width: isSelected ? 1.5 : 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              LibraryStatusHelper.getStatusIcon(status),
-                              size: 15,
-                              color: isSelected ? statusColor : AppTheme.textMuted,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              status,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                color: isSelected ? Colors.white : AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.xl),
 
                 // ── Rating Pribadi (1-10) ─────────────────────────
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Rating Pribadi (1 - 10)',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textSecondary,
+                      style: AppTypography.titleSmall.copyWith(
+                        color: AppColors.textSecondary,
                       ),
                     ),
                     if (_ratingPribadi != null)
                       GestureDetector(
                         onTap: () => setState(() => _ratingPribadi = null),
-                        child: const Text(
+                        child: Text(
                           'Hapus Rating',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.error,
-                            fontWeight: FontWeight.w500,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.error,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.sm),
 
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.md,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppTheme.surfaceElevated,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.border),
+                    color: AppColors.surface,
+                    borderRadius: AppRadius.lgBorderRadius,
+                    border: Border.all(color: AppColors.border),
                   ),
                   child: Column(
                     children: [
@@ -463,21 +422,20 @@ class _LibraryEntrySheetState extends State<LibraryEntrySheet> {
                               Icon(
                                 Icons.star_rounded,
                                 color: _ratingPribadi != null
-                                    ? const Color(0xFFFACC15)
-                                    : AppTheme.textMuted,
+                                    ? AppColors.ratingStar
+                                    : AppColors.textMuted,
                                 size: 22,
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: AppSpacing.sm),
                               Text(
                                 _ratingPribadi != null
                                     ? '$_ratingPribadi / 10'
                                     : 'Belum dinilai',
-                                style: TextStyle(
-                                  fontSize: 15,
+                                style: AppTypography.titleSmall.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: _ratingPribadi != null
-                                      ? Colors.white
-                                      : AppTheme.textMuted,
+                                      ? AppColors.textPrimary
+                                      : AppColors.textMuted,
                                 ),
                               ),
                             ],
@@ -492,21 +450,19 @@ class _LibraryEntrySheetState extends State<LibraryEntrySheet> {
                                             ? 'Cukup'
                                             : 'Kurang')
                                 : 'Opsional',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.textSecondary,
+                            style: AppTypography.labelSmall.copyWith(
+                              color: AppColors.textSecondary,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      // Slider 1-10
+                      const SizedBox(height: AppSpacing.xs),
                       SliderTheme(
                         data: SliderTheme.of(context).copyWith(
-                          activeTrackColor: const Color(0xFFFACC15),
-                          inactiveTrackColor: AppTheme.border,
-                          thumbColor: const Color(0xFFFACC15),
-                          overlayColor: const Color(0xFFFACC15).withValues(alpha: 0.2),
+                          activeTrackColor: AppColors.ratingStar,
+                          inactiveTrackColor: AppColors.border,
+                          thumbColor: AppColors.ratingStar,
+                          overlayColor: AppColors.ratingStar.withValues(alpha: 0.2),
                           trackHeight: 4,
                         ),
                         child: Slider(
@@ -524,27 +480,39 @@ class _LibraryEntrySheetState extends State<LibraryEntrySheet> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.xl),
 
                 // ── Jam Bermain ───────────────────────────────────
-                const Text(
+                Text(
                   'Jam Bermain (jam)',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textSecondary,
+                  style: AppTypography.titleSmall.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 TextFormField(
                   controller: _jamMainController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.timer_outlined, color: AppTheme.textSecondary, size: 20),
+                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(
+                      Icons.timer_outlined,
+                      color: AppColors.textMuted,
+                      size: 20,
+                    ),
                     suffixText: 'jam',
-                    suffixStyle: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                    suffixStyle: AppTypography.labelSmall.copyWith(color: AppColors.textMuted),
                     hintText: '0',
+                    filled: true,
+                    fillColor: AppColors.inputBackground,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.md,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: AppRadius.lgBorderRadius,
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -560,94 +528,53 @@ class _LibraryEntrySheetState extends State<LibraryEntrySheet> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.xl),
 
                 // ── Catatan Pribadi ───────────────────────────────
-                const Text(
+                Text(
                   'Catatan Pribadi',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textSecondary,
+                  style: AppTypography.titleSmall.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 TextFormField(
                   controller: _catatanController,
                   maxLines: 3,
-                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
-                  decoration: const InputDecoration(
+                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
+                  decoration: InputDecoration(
                     hintText: 'Tulis kesan, progres misi, atau catatan pribadi...',
-                    contentPadding: EdgeInsets.all(14),
+                    hintStyle: AppTypography.bodyMedium.copyWith(color: AppColors.textMuted),
+                    filled: true,
+                    fillColor: AppColors.inputBackground,
+                    contentPadding: const EdgeInsets.all(AppSpacing.md),
+                    border: OutlineInputBorder(
+                      borderRadius: AppRadius.lgBorderRadius,
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xxl),
 
                 // ── Tombol Simpan ─────────────────────────────────
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _isSaving || _isDeleting ? null : _handleSave,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _isSaving
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : Text(
-                            isEditing ? 'Simpan Perubahan' : 'Tambahkan ke Library',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                  ),
+                AppButton(
+                  text: isEditing ? 'Simpan Perubahan' : 'Tambahkan ke Library',
+                  onPressed: _isSaving || _isDeleting ? null : _handleSave,
+                  isLoading: _isSaving,
+                  variant: AppButtonVariant.primary,
+                  height: 52,
                 ),
 
                 // ── Tombol Hapus (jika sedang mengedit) ────────────
                 if (isEditing) ...[
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
+                  const SizedBox(height: AppSpacing.md),
+                  AppButton(
+                    text: _isDeleting ? 'Menghapus...' : 'Hapus dari Library',
+                    icon: Icons.delete_outline_rounded,
+                    onPressed: _isSaving || _isDeleting ? null : _handleDelete,
+                    isLoading: _isDeleting,
+                    variant: AppButtonVariant.destructive,
                     height: 48,
-                    child: OutlinedButton.icon(
-                      onPressed: _isSaving || _isDeleting ? null : _handleDelete,
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppTheme.error, width: 1.2),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: _isDeleting
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.error),
-                              ),
-                            )
-                          : const Icon(Icons.delete_outline_rounded, color: AppTheme.error, size: 20),
-                      label: Text(
-                        _isDeleting ? 'Menghapus...' : 'Hapus dari Library',
-                        style: const TextStyle(
-                          color: AppTheme.error,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
                   ),
                 ],
               ],
