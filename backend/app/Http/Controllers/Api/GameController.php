@@ -8,6 +8,8 @@ use App\Models\Game;
 use App\Models\Genre;
 use App\Models\LibraryEntry;
 use App\Models\Platform;
+use App\Models\PriceHistory;
+use App\Models\WishlistAlert;
 use App\Services\RawgService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -397,31 +399,76 @@ class GameController extends Controller
 
             $user = $request->user() ?? auth('sanctum')->user();
             $libraryEntry = null;
+            $wishlistAlert = null;
             if ($user) {
                 $libraryEntry = LibraryEntry::with(['game.genres', 'game.platforms'])
                     ->where('user_id', $user->id)
                     ->where('game_id', $game->id)
                     ->first();
+
+                $wishlistAlert = WishlistAlert::where('user_id', $user->id)
+                    ->where('game_id', $game->id)
+                    ->first();
             }
+
+            // Ambil harga terkini per toko dari price_history
+            $rate = (float) config('services.currency.usd_to_idr_rate', 16000);
+            $latestPrices = PriceHistory::where('game_id', $game->id)
+                ->whereIn('id', function ($query) use ($game) {
+                    $query->selectRaw('MAX(id)')
+                        ->from('price_history')
+                        ->where('game_id', $game->id)
+                        ->groupBy('toko');
+                })
+                ->orderBy('harga', 'asc')
+                ->get();
+
+            $formattedPrices = $latestPrices->map(function ($item) use ($rate) {
+                return [
+                    'toko'               => $item->toko,
+                    'harga'              => (float) $item->harga,
+                    'harga_idr_estimasi' => (int) round($item->harga * $rate),
+                    'diskon_persen'      => (float) $item->diskon_persen,
+                    'dicek_pada'         => $item->dicek_pada ? Carbon::parse($item->dicek_pada)->toIso8601String() : null,
+                ];
+            })->values()->toArray();
+
+            $cheapest = $latestPrices->first();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Detail game berhasil diambil',
                 'data'    => [
-                    'id'             => $game->id,
-                    'rawg_id'        => $game->rawg_id,
-                    'judul'          => $game->judul,
-                    'cover_url'      => $game->cover_url,
-                    'rating'         => (float) $game->rating,
-                    'deskripsi'      => $game->deskripsi ?? 'Deskripsi belum tersedia.',
-                    'tanggal_rilis'  => $game->tanggal_rilis ? Carbon::parse($game->tanggal_rilis)->format('Y-m-d') : null,
-                    'genre'          => implode(', ', $genreNames),
-                    'genres'         => $genreNames,
-                    'platform'       => implode(', ', $platformNames),
-                    'platforms'      => $platformNames,
-                    'cached_at'      => $game->cached_at ? Carbon::parse($game->cached_at)->toIso8601String() : null,
-                    'library_status' => $libraryEntry?->status,
-                    'library_entry'  => $libraryEntry ? new LibraryEntryResource($libraryEntry) : null,
+                    'id'                          => $game->id,
+                    'rawg_id'                     => $game->rawg_id,
+                    'cheapshark_id'               => $game->cheapshark_id,
+                    'judul'                       => $game->judul,
+                    'cover_url'                   => $game->cover_url,
+                    'rating'                      => (float) $game->rating,
+                    'deskripsi'                   => $game->deskripsi ?? 'Deskripsi belum tersedia.',
+                    'tanggal_rilis'               => $game->tanggal_rilis ? Carbon::parse($game->tanggal_rilis)->format('Y-m-d') : null,
+                    'genre'                       => implode(', ', $genreNames),
+                    'genres'                      => $genreNames,
+                    'platform'                    => implode(', ', $platformNames),
+                    'platforms'                   => $platformNames,
+                    'cached_at'                   => $game->cached_at ? Carbon::parse($game->cached_at)->toIso8601String() : null,
+                    'library_status'              => $libraryEntry?->status,
+                    'library_entry'               => $libraryEntry ? new LibraryEntryResource($libraryEntry) : null,
+                    'in_wishlist'                 => $wishlistAlert !== null,
+                    'wishlist_status'             => $wishlistAlert ? ($wishlistAlert->aktif ? 'Aktif' : 'Nonaktif') : null,
+                    'wishlist_alert'              => $wishlistAlert ? [
+                        'id'                        => $wishlistAlert->id,
+                        'harga_target'              => (float) $wishlistAlert->harga_target,
+                        'harga_target_idr_estimasi' => (int) round($wishlistAlert->harga_target * $rate),
+                        'aktif'                     => (bool) $wishlistAlert->aktif,
+                    ] : null,
+                    'harga_tersedia'              => !empty($formattedPrices),
+                    'status_harga'                => !empty($formattedPrices) ? 'Harga tersedia' : 'Harga belum tersedia',
+                    'harga_terendah'              => $cheapest ? (float) $cheapest->harga : null,
+                    'harga_terendah_idr_estimasi' => $cheapest ? (int) round($cheapest->harga * $rate) : null,
+                    'toko_termurah'               => $cheapest?->toko,
+                    'kurs_usd_ke_idr_estimasi'    => $rate,
+                    'harga_terkini'               => $formattedPrices,
                 ],
             ], 200);
         }

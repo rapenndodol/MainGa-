@@ -41,4 +41,14 @@ return [
         'timeout' => (int) env('RAWG_TIMEOUT', 10),
     ],
 
+    'cheapshark' => [
+        'base_url' => env('CHEAPSHARK_BASE_URL', 'https://www.cheapshark.com/api/1.0'),
+        'timeout' => (int) env('CHEAPSHARK_TIMEOUT', 10),
+        'user_agent' => env('CHEAPSHARK_USER_AGENT', 'MainGa/1.0 (support@mainga.app)'),
+    ],
+
+    'currency' => [
+        'usd_to_idr_rate' => (float) env('USD_TO_IDR_RATE', 16000),
+    ],
+
 ];

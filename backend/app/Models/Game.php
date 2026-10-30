@@ -15,6 +15,7 @@ class Game extends Model
 
     protected $fillable = [
         'rawg_id',
+        'cheapshark_id',
         'judul',
         'cover_url',
         'rating',
