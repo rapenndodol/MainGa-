@@ -491,3 +491,110 @@ flutter run
 4. **Penerapan Gaya Visual Anti-Slop (Skill `design-taste-frontend`)**:
    - Status badge diberi kode warna fungsional yang tenang: Cyan untuk Wishlist, Indigo untuk Backlog, Amber untuk Sedang Dimainkan, Emerald Green untuk Tamat, dan Rose untuk Dropped.
    - Kartu dirancang rata (*flat surfaces*), dibatasi garis 1px (`#2E2A48`), dengan hierarki tipografi kontras dan indikator data jujur (nilai kosong ditampilkan `-` atau indikasi ramah).
+
+
+---
+
+## 📌 Deskripsi Tahap 4 (Wishlist & Pelacak Harga — US-04, US-05, FR-07, FR-08, FR-09)
+
+Tahap 4 mengimplementasikan backend untuk Wishlist pribadi dengan harga target dan Pelacak Harga multi-toko berbasis CheapShark API sesuai [PRD](rules/PRD_MainGA.md) dan aturan [rules_mainga.md](rules/rules_mainga.md):
+
+- **CheapShark API Integration (`PriceService`)**:
+  - Service terisolasi `App\Services\PriceService` tanpa API key (publik) dengan konfigurasi base URL dan timeout dari `config/services.php`.
+  - Normalisasi huruf besar-kecil dan tanda baca untuk pencocokan judul game paling relevan dari hasil pencarian CheapShark.
+  - Penyimpanan ID game CheapShark pada kolom `cheapshark_id` di tabel `games` (migration baru `2026_10_30_000001_add_cheapshark_id_to_games_table.php`) agar pencarian ulang tidak perlu dilakukan pada pengecekan berikutnya.
+  - Pengambilan nama toko dari endpoint `/stores` dengan caching Laravel selama 24 jam dan fallback data toko populer.
+  - Penanganan galat aman (*graceful degradation*): jika game tidak ditemukan atau API CheapShark down/timeout, aplikasi menandai status harga belum tersedia tanpa menimbulkan error 500.
+
+- **Pencatatan Riwayat Harga (`price_history`)**:
+  - Setiap pengecekan menyimpan satu baris per toko ke tabel `price_history` (`game_id`, `toko`, `harga`, `diskon_persen`, `dicek_pada`).
+  - Pencegahan duplikasi data: sistem tidak menyimpan baris baru bila harga dan toko sama dengan pengecekan sebelumnya dalam jam yang sama.
+
+- **Konversi Kurs Mata Uang**:
+  - Harga dasar dan harga target disimpan dalam mata uang USD.
+  - Nilai estimasi Rupiah dihitung menggunakan kurs tetap dari `config/services.php` (dibaca dari environment variable `USD_TO_IDR_RATE` dengan default 16.000).
+  - Diberi penamaan field yang jelas sebagai estimasi (`harga_target_idr_estimasi`, `harga_terendah_idr_estimasi`, `selisih_harga_target_idr_estimasi`, `kurs_usd_ke_idr_estimasi`).
+
+- **Endpoint REST API Terproteksi Sanctum (`auth:sanctum`)**:
+  - `GET /api/wishlist` : Mengambil daftar wishlist milik pengguna yang sedang login, mencakup data game, `harga_target`, `aktif`, `harga_terendah` beserta tokonya (`toko_termurah`), dan `selisih_harga_target` terhadap harga target (`null` bila harga belum tersedia).
+  - `POST /api/wishlist` : Menambahkan game ke wishlist (`game_id` atau `rawg_id`) dengan `harga_target` dalam USD. Langsung menjalankan satu kali pengecekan harga untuk game tersebut.
+  - `GET /api/wishlist/{id}` : Mengambil detail satu entri wishlist pengguna.
+  - `PUT /api/wishlist/{id}` : Mengubah `harga_target` atau status `aktif`.
+  - `DELETE /api/wishlist/{id}` : Menghapus game dari wishlist pengguna.
+  - `GET /api/games/{id}/prices` : Mengambil harga terkini per toko dan riwayat harga lengkap dalam urutan waktu kronologis (untuk visualisasi grafik garis).
+  - `GET /api/games/{id}` : Endpoint detail game yang sudah ada diperluas dengan field `in_wishlist`, `wishlist_status`, `wishlist_alert`, serta daftar harga terkini per toko (`harga_terkini`) dan harga terendah.
+
+- **Aturan Bisnis & Integritas Data**:
+  - `harga_target > 0` (validasi ditolak dengan HTTP 422 bila <= 0 atau non-numerik).
+  - Satu game hanya dapat muncul sekali per pengguna di wishlist (HTTP 422 bila duplikat).
+  - Isolasi kepemilikan: pengguna hanya dapat mengakses, mengubah, dan menghapus wishlist miliknya sendiri (HTTP 403 bila mencoba mengakses data pengguna lain).
+  - Akses tanpa token mengembalikan HTTP 401.
+
+- **Command Artisan & Task Scheduler**:
+  - Command Artisan: `php artisan prices:check` mengecek harga hanya untuk game dengan wishlist aktif (`aktif = true`), tanpa menduplikasi pemanggilan bila banyak pengguna memantau game yang sama.
+  - Opsi manual: `php artisan prices:check --game={id}` untuk memicu pengecekan satu game secara spesifik (berdasarkan ID lokal atau RAWG ID).
+  - Terdaftar pada Laravel Task Scheduler dengan interval 6 jam (`Schedule::command('prices:check')->everySixHours()`).
+
+---
+
+## ⚙️ Cara Menjalankan Pengecekan Harga & Scheduler
+
+### 1. Pengecekan Harga Manual (Artisan Command)
+Untuk mengecek seluruh game yang ada di wishlist aktif pengguna:
+```bash
+cd backend
+php artisan prices:check
+```
+
+Untuk mengecek satu game secara manual berdasarkan ID lokal atau RAWG ID:
+```bash
+cd backend
+php artisan prices:check --game=1
+```
+
+### 2. Menjalankan Task Scheduler (Laravel Scheduler Worker)
+Untuk menjalankan worker scheduler secara lokal/demo sehingga tugas terjadwal (interval 6 jam) berjalan secara otomatis:
+```bash
+cd backend
+php artisan schedule:work
+```
+
+Untuk melihat daftar jadwal perintah yang terdaftar:
+```bash
+cd backend
+php artisan schedule:list
+```
+
+---
+
+## 🧪 Hasil Pengujian Otomatis Tahap 4
+
+### Feature Tests Backend Tambahan:
+Dijalankan dengan: `php artisan test`
+
+1. **WishlistTest** (`tests/Feature/WishlistTest.php` — 10 tests):
+   - ✅ Akses tanpa token mengembalikan status 401.
+   - ✅ Tambah game ke wishlist dengan `game_id` dan memicu pengecekan harga.
+   - ✅ Tambah game ke wishlist dengan `rawg_id` (auto-fetch RAWG).
+   - ✅ Validasi harga target harus lebih besar dari 0 (422 untuk nilai 0, negatif, atau string).
+   - ✅ Penolakan game duplikat di wishlist untuk user yang sama (422).
+   - ✅ Proteksi akses dan modifikasi wishlist pengguna lain (403).
+   - ✅ Pembaruan harga target dan status aktif wishlist (PUT).
+   - ✅ Penghapusan game dari wishlist (DELETE).
+   - ✅ Endpoint `GET /api/wishlist` mengembalikan harga terendah, toko, dan selisih terhadap target.
+   - ✅ Endpoint detail game memuat status wishlist pengguna dan harga terkini per toko.
+
+2. **PriceTrackerTest** (`tests/Feature/PriceTrackerTest.php` — 10 tests):
+   - ✅ Pencocokan judul menormalisasi huruf besar-kecil dan tanda baca serta menyimpan `cheapshark_id`.
+   - ✅ Pengecekan berikutnya langsung memakai `cheapshark_id` tanpa query pencarian ulang.
+   - ✅ Game tidak ditemukan di CheapShark ditandai harga belum tersedia tanpa galat.
+   - ✅ Galat CheapShark (500/timeout) ditangani secara aman tanpa membuat aplikasi galat.
+   - ✅ Pengecekan harga menyimpan baris per toko ke `price_history`.
+   - ✅ Pencegahan duplikasi baris di `price_history` bila toko dan harga sama dalam jam yang sama.
+   - ✅ Perubahan harga dalam jam yang sama tetap dicatat sebagai baris baru.
+   - ✅ Endpoint `GET /api/games/{id}/prices` mengembalikan harga terkini dan riwayat waktu kronologis.
+   - ✅ Endpoint `GET /api/games/{id}/prices` tanpa token mengembalikan status 401.
+   - ✅ Artisan command `prices:check` hanya memproses wishlist aktif dan menduplikasi query game.
+   - ✅ Artisan command `prices:check --game={id}` mengecek 1 game secara manual.
+
+**Total Pengujian Backend**: **49 passed, 248 assertions, 0 failed**.
