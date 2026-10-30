@@ -24,4 +24,8 @@ class ApiConstants {
 
   // Library Endpoints (Tahap 3)
   static const String libraryEndpoint = '$baseUrl/library';
+
+  // Wishlist & Price Endpoints
+  static const String wishlistEndpoint = '$baseUrl/wishlist';
+  static String gamePricesEndpoint(dynamic id) => '$baseUrl/games/$id/prices';
 }

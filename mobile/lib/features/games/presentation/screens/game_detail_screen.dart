@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_loading_skeleton.dart';
 import '../../../../core/widgets/app_rawg_attribution.dart';
 import '../../../../core/widgets/app_status_chip.dart';
 import '../../../library/data/models/library_entry_model.dart';
 import '../../../library/presentation/controllers/library_notifier.dart';
 import '../../../library/presentation/widgets/library_entry_sheet.dart';
+import '../../../wishlist/data/models/wishlist_item_model.dart';
+import '../../../wishlist/presentation/controllers/wishlist_notifier.dart';
+import '../../../wishlist/presentation/widgets/price_tracker_section.dart';
+import '../../../wishlist/presentation/widgets/wishlist_form_sheet.dart';
 import '../../data/datasources/game_remote_data_source.dart';
 import '../../data/models/game_model.dart';
 
@@ -33,16 +36,18 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
     super.initState();
     _game = widget.game;
 
-    // Selalu fetch detail terbaru untuk sinkronisasi deskripsi dan status library pengguna
+    // Selalu fetch detail terbaru untuk sinkronisasi deskripsi, status library, dan wishlist
     _fetchFullDetail();
 
-    // Dengarkan perubahan library agar layar detail langsung ikut ter-update
+    // Dengarkan perubahan library dan wishlist agar layar detail langsung ikut ter-update
     LibraryNotifier.instance.addListener(_onLibraryChanged);
+    WishlistNotifier.instance.addListener(_onWishlistChanged);
   }
 
   @override
   void dispose() {
     LibraryNotifier.instance.removeListener(_onLibraryChanged);
+    WishlistNotifier.instance.removeListener(_onWishlistChanged);
     super.dispose();
   }
 
@@ -65,6 +70,46 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
             libraryEntryData: notifier.lastModifiedEntry?.toJson(),
           );
         });
+      }
+    }
+  }
+
+  void _onWishlistChanged() {
+    if (!mounted) return;
+    final notifier = WishlistNotifier.instance;
+    final gameId = _game.id > 0 ? _game.id : _game.rawgId;
+
+    if (notifier.lastModifiedGameId == gameId ||
+        notifier.lastModifiedGameId == _game.id ||
+        notifier.lastModifiedGameId == _game.rawgId ||
+        (notifier.lastModifiedWishlistId != null &&
+            notifier.lastModifiedWishlistId == _game.wishlistAlertId)) {
+      if (notifier.lastActionWasDelete) {
+        setState(() {
+          _game = _game.copyWith(clearWishlistStatus: true);
+        });
+      } else if (notifier.lastModifiedItem != null) {
+        final item = notifier.lastModifiedItem!;
+        setState(() {
+          _game = _game.copyWith(
+            inWishlist: true,
+            wishlistStatus: item.aktif ? 'Aktif' : 'Nonaktif',
+            wishlistAlertData: item.toJson(),
+          );
+        });
+      } else if (notifier.lastModifiedActive != null) {
+        final bool isAktif = notifier.lastModifiedActive!;
+        final currentData =
+            Map<String, dynamic>.from(_game.wishlistAlertData ?? {});
+        currentData['aktif'] = isAktif;
+        setState(() {
+          _game = _game.copyWith(
+            wishlistStatus: isAktif ? 'Aktif' : 'Nonaktif',
+            wishlistAlertData: currentData,
+          );
+        });
+      } else {
+        _fetchFullDetail();
       }
     }
   }
@@ -95,6 +140,23 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
       context,
       game: _game,
       entry: entry,
+    );
+
+    if (changed == true) {
+      _fetchFullDetail();
+    }
+  }
+
+  Future<void> _openWishlistForm() async {
+    WishlistItemModel? wishlistItem;
+    if (_game.wishlistAlertData != null) {
+      wishlistItem = WishlistItemModel.fromJson(_game.wishlistAlertData!);
+    }
+
+    final changed = await WishlistFormSheet.show(
+      context,
+      game: _game,
+      wishlistItem: wishlistItem,
     );
 
     if (changed == true) {
@@ -225,7 +287,8 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                       const SizedBox(width: AppSpacing.md),
 
                       // Tanggal Rilis Badge
-                      if (_game.tanggalRilis != null && _game.tanggalRilis!.isNotEmpty)
+                      if (_game.tanggalRilis != null &&
+                          _game.tanggalRilis!.isNotEmpty)
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.md,
@@ -258,8 +321,8 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                   ),
                   const SizedBox(height: AppSpacing.xl),
 
-                  // ── Tombol Status Library ───────────────────────
-                  _buildLibraryActionButton(),
+                  // ── Tombol Library & Wishlist (Berdampingan) ───────────
+                  _buildActionButtons(),
                   const SizedBox(height: AppSpacing.xxl),
 
                   // ── Section: Genre ─────────────────────────────
@@ -304,7 +367,8 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                   ],
 
                   // ── Section: Platform ──────────────────────────
-                  if (_game.platforms.isNotEmpty || _game.platform.isNotEmpty) ...[
+                  if (_game.platforms.isNotEmpty ||
+                      _game.platform.isNotEmpty) ...[
                     Text(
                       'Platform',
                       style: AppTypography.titleSmall.copyWith(
@@ -384,12 +448,14 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                             height: 1.6,
                           ),
                         ),
-                        if (_game.deskripsi != null && _game.deskripsi!.length > 200) ...[
+                        if (_game.deskripsi != null &&
+                            _game.deskripsi!.length > 200) ...[
                           const SizedBox(height: AppSpacing.sm),
                           GestureDetector(
                             onTap: () {
                               setState(() {
-                                _isDescriptionExpanded = !_isDescriptionExpanded;
+                                _isDescriptionExpanded =
+                                    !_isDescriptionExpanded;
                               });
                             },
                             child: Text(
@@ -408,6 +474,13 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
 
                   const SizedBox(height: AppSpacing.xxl),
 
+                  // ── Section: Harga & Riwayat Harga (US-05) ─────
+                  PriceTrackerSection(
+                    gameIdOrRawgId: _game.id > 0 ? _game.id : _game.rawgId,
+                  ),
+
+                  const SizedBox(height: AppSpacing.xxl),
+
                   // ── Atribusi RAWG dengan link aktif ────────────
                   const AppRawgAttribution(),
                   const SizedBox(height: AppSpacing.xl),
@@ -420,24 +493,75 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
     );
   }
 
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        // ── Tombol / Status Library ───────────────────────────
+        Expanded(
+          child: _buildLibraryActionButton(),
+        ),
+        const SizedBox(width: AppSpacing.md),
+
+        // ── Tombol / Status Wishlist ──────────────────────────
+        Expanded(
+          child: _buildWishlistActionButton(),
+        ),
+      ],
+    );
+  }
+
   Widget _buildLibraryActionButton() {
     final status = _game.libraryStatus;
 
     if (status == null) {
-      // Game belum ada di library: Tampilkan tombol pill primer
-      return AppButton(
-        text: 'Tambah ke Library',
-        icon: Icons.bookmark_add_outlined,
-        onPressed: _openLibraryForm,
-        variant: AppButtonVariant.primary,
-        height: 50,
+      // Belum ada di library: Tombol primer
+      return Container(
+        height: 52,
+        decoration: BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: AppRadius.lgBorderRadius,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: AppRadius.lgBorderRadius,
+            onTap: _openLibraryForm,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.bookmark_add_outlined,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                  SizedBox(width: AppSpacing.xs + 2),
+                  Flexible(
+                    child: Text(
+                      'Ke Library',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       );
     }
 
-    // Game sudah ada di library: kartu interaktif dengan status badge
+    // Sudah ada di library: kartu status interaktif
     final Color statusColor = AppStatusHelper.getStatusColor(status);
 
     return Container(
+      height: 52,
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: AppRadius.lgBorderRadius,
@@ -452,48 +576,140 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
           borderRadius: AppRadius.lgBorderRadius,
           onTap: _openLibraryForm,
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Row(
               children: [
-                AppStatusChip(status: status, compact: true),
-                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppStatusChip(status: status, compact: true),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.edit_outlined,
+                  size: 15,
+                  color: AppColors.primaryLight,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWishlistActionButton() {
+    if (!_game.inWishlist) {
+      // Belum ada di wishlist: Tombol "Tambah ke Wishlist"
+      return Container(
+        height: 52,
+        decoration: BoxDecoration(
+          color: AppColors.primaryContainer.withValues(alpha: 0.6),
+          borderRadius: AppRadius.lgBorderRadius,
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.5),
+            width: 1.2,
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: AppRadius.lgBorderRadius,
+            onTap: _openWishlistForm,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.favorite_border_rounded,
+                    size: 18,
+                    color: AppColors.primaryLight,
+                  ),
+                  SizedBox(width: AppSpacing.xs + 2),
+                  Flexible(
+                    child: Text(
+                      'Tambah ke Wishlist',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryLight,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Sudah ada di wishlist: Kartu target harga & status aktif
+    final double? target = _game.wishlistHargaTarget;
+    final bool isAktif = _game.isWishlistActive;
+
+    return Container(
+      height: 52,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.lgBorderRadius,
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.4),
+          width: 1.2,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: AppRadius.lgBorderRadius,
+          onTap: _openWishlistForm,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.favorite_rounded,
+                  size: 18,
+                  color: isAktif ? AppColors.primary : AppColors.textMuted,
+                ),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Tersimpan di Library',
+                        'Wishlist',
                         style: AppTypography.labelMedium.copyWith(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.bold,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
                       Text(
-                        'Ketuk untuk ubah status atau catatan',
+                        target != null
+                            ? 'Target: \$${target.toStringAsFixed(2)}'
+                            : (isAktif ? 'Aktif' : 'Nonaktif'),
                         style: AppTypography.bodySmall.copyWith(
                           color: AppColors.textMuted,
-                          fontSize: 11,
+                          fontSize: 10,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceElevated,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: const Icon(
-                    Icons.edit_outlined,
-                    size: 16,
-                    color: AppColors.primaryLight,
-                  ),
+                const Icon(
+                  Icons.edit_outlined,
+                  size: 15,
+                  color: AppColors.primaryLight,
                 ),
               ],
             ),

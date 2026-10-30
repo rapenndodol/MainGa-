@@ -15,6 +15,10 @@ import 'package:mobile/features/library/presentation/screens/library_screen.dart
 import 'package:mobile/features/library/presentation/widgets/library_game_card.dart';
 import 'package:mobile/features/library/presentation/widgets/library_status_badge.dart';
 import 'package:mobile/features/wishlist/presentation/screens/wishlist_screen.dart';
+import 'package:mobile/features/wishlist/data/models/wishlist_item_model.dart';
+import 'package:mobile/features/wishlist/data/models/wishlist_response_model.dart';
+import 'package:mobile/features/wishlist/data/models/game_price_model.dart';
+import 'package:mobile/features/wishlist/presentation/widgets/wishlist_game_card.dart';
 import 'package:mobile/core/widgets/app_badge.dart';
 import 'package:mobile/core/widgets/app_button.dart';
 import 'package:mobile/core/widgets/app_empty_state.dart';
@@ -264,6 +268,154 @@ void main() {
       expect(response.perPage, 15);
       expect(response.total, 18);
     });
+
+    // ── Wishlist & Pelacak Harga (US-04 & US-05) Tests ─────────
+    test('WishlistItemModel.fromJson parses attributes and target reached calculation correctly', () {
+      final json = {
+        'id': 10,
+        'user_id': 1,
+        'game_id': 5,
+        'harga_target': 20.0,
+        'harga_target_idr_estimasi': 320000,
+        'aktif': true,
+        'harga_tersedia': true,
+        'harga_terendah': 14.99,
+        'harga_terendah_idr_estimasi': 239840,
+        'toko_termurah': 'Steam',
+        'diskon_persen': 50.0,
+        'selisih_harga_target': -5.01,
+        'selisih_harga_target_idr_estimasi': -80160,
+        'kurs_usd_ke_idr_estimasi': 16000.0,
+        'dicek_terakhir': '2026-10-30T10:00:00Z',
+        'game': {
+          'id': 5,
+          'rawg_id': 3498,
+          'judul': 'Grand Theft Auto V',
+          'cover_url': 'https://media.rawg.io/games/gta5.jpg',
+          'rating': 4.5,
+          'genre': 'Action',
+          'genres': ['Action'],
+          'platform': 'PC',
+          'platforms': ['PC'],
+        },
+      };
+
+      final item = WishlistItemModel.fromJson(json);
+
+      expect(item.id, 10);
+      expect(item.gameId, 5);
+      expect(item.hargaTarget, 20.0);
+      expect(item.hargaTerendah, 14.99);
+      expect(item.tokoTermurah, 'Steam');
+      expect(item.diskonPersen, 50.0);
+      expect(item.isTargetReached, true);
+      expect(item.judul, 'Grand Theft Auto V');
+      expect(item.coverUrl, 'https://media.rawg.io/games/gta5.jpg');
+    });
+
+    test('WishlistResponseModel.fromJson parses wishlists and pagination correctly', () {
+      final json = {
+        'success': true,
+        'message': 'Daftar wishlist berhasil diambil',
+        'data': {
+          'wishlists': [
+            {
+              'id': 1,
+              'user_id': 1,
+              'game_id': 10,
+              'harga_target': 30.0,
+              'harga_target_idr_estimasi': 480000,
+              'aktif': true,
+              'harga_tersedia': false,
+              'harga_terendah': null,
+              'toko_termurah': null,
+              'game': {
+                'id': 10,
+                'rawg_id': 1234,
+                'judul': 'Cyberpunk 2077',
+              },
+            }
+          ],
+          'pagination': {
+            'current_page': 1,
+            'last_page': 1,
+            'per_page': 20,
+            'total': 1,
+          }
+        }
+      };
+
+      final res = WishlistResponseModel.fromJson(json);
+
+      expect(res.success, true);
+      expect(res.wishlists.length, 1);
+      expect(res.wishlists.first.judul, 'Cyberpunk 2077');
+      expect(res.wishlists.first.isTargetReached, false);
+      expect(res.currentPage, 1);
+      expect(res.total, 1);
+    });
+
+    test('GamePricesResponseModel.fromJson parses store prices and history correctly', () {
+      final json = {
+        'success': true,
+        'message': 'Data harga game berhasil diambil',
+        'data': {
+          'harga_tersedia': true,
+          'status_keterangan': 'Harga tersedia',
+          'harga_terendah': 19.99,
+          'harga_terendah_idr_estimasi': 319840,
+          'toko_termurah': 'Epic Games Store',
+          'kurs_usd_ke_idr_estimasi': 16000.0,
+          'harga_terkini': [
+            {
+              'id': 1,
+              'toko': 'Epic Games Store',
+              'harga': 19.99,
+              'harga_idr_estimasi': 319840,
+              'diskon_persen': 40.0,
+              'dicek_pada': '2026-10-30T10:00:00Z',
+            },
+            {
+              'id': 2,
+              'toko': 'Steam',
+              'harga': 24.99,
+              'harga_idr_estimasi': 399840,
+              'diskon_persen': 25.0,
+              'dicek_pada': '2026-10-30T10:00:00Z',
+            }
+          ],
+          'riwayat_harga': [
+            {
+              'id': 101,
+              'toko': 'Steam',
+              'harga': 39.99,
+              'harga_idr_estimasi': 639840,
+              'diskon_persen': 0.0,
+              'dicek_pada': '2026-10-01T10:00:00Z',
+            },
+            {
+              'id': 102,
+              'toko': 'Epic Games Store',
+              'harga': 19.99,
+              'harga_idr_estimasi': 319840,
+              'diskon_persen': 40.0,
+              'dicek_pada': '2026-10-15T10:00:00Z',
+            }
+          ]
+        }
+      };
+
+      final res = GamePricesResponseModel.fromJson(json);
+
+      expect(res.success, true);
+      expect(res.hargaTersedia, true);
+      expect(res.tokoTermurah, 'Epic Games Store');
+      expect(res.hargaTerendah, 19.99);
+      expect(res.hargaTerkini.length, 2);
+      expect(res.riwayatHarga.length, 2);
+      expect(res.hargaTerkini.first.toko, 'Epic Games Store');
+      expect(res.hargaTerkini.first.diskonPersen, 40.0);
+    });
   });
 
   group('Widget Tests', () {
@@ -326,7 +478,7 @@ void main() {
       );
 
       expect(find.text('Wishlist Incaran'), findsOneWidget);
-      expect(find.text('Belum ada game'), findsOneWidget);
+      expect(find.text('Belum ada game di wishlist'), findsOneWidget);
     });
 
     // ── Tahap 3 Widget Tests: Badge & Card ────────────────────
@@ -459,6 +611,70 @@ void main() {
 
       expect(find.text('4.8'), findsOneWidget);
       expect(find.byIcon(Icons.star_rounded), findsOneWidget);
+    });
+
+    // ── US-04 & US-05: WishlistGameCard Widget Test ────────────
+    testWidgets('WishlistGameCard renders card elements and target reached status correctly', (WidgetTester tester) async {
+      bool tapped = false;
+      bool toggled = false;
+      bool deleted = false;
+
+      final item = WishlistItemModel(
+        id: 1,
+        userId: 1,
+        gameId: 10,
+        hargaTarget: 25.0,
+        hargaTargetIdrEstimasi: 400000,
+        aktif: true,
+        hargaTersedia: true,
+        hargaTerendah: 19.99,
+        hargaTerendahIdrEstimasi: 319840,
+        tokoTermurah: 'Steam',
+        diskonPersen: 50.0,
+        selisihHargaTarget: -5.01,
+        selisihHargaTargetIdrEstimasi: -80160,
+        game: const GameModel(
+          id: 10,
+          rawgId: 100,
+          judul: 'The Witcher 3',
+          rating: 4.8,
+          genre: 'RPG',
+          genres: ['RPG'],
+          platform: 'PC',
+          platforms: ['PC'],
+        ),
+      );
+
+      await tester.pumpWidget(
+        TestWrapper(
+          child: Scaffold(
+            body: WishlistGameCard(
+              item: item,
+              onTap: () => tapped = true,
+              onToggleActive: (_) => toggled = true,
+              onDelete: () => deleted = true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('The Witcher 3'), findsOneWidget);
+      expect(find.text('Target: '), findsOneWidget);
+      expect(find.text('\$25.00'), findsOneWidget);
+      expect(find.text('Steam: '), findsOneWidget);
+      expect(find.text('\$19.99'), findsOneWidget);
+      expect(find.text('-50%'), findsOneWidget);
+      expect(find.textContaining('Mencapai target!'), findsOneWidget);
+      expect(find.text('Pantau aktif'), findsOneWidget);
+
+      await tester.tap(find.text('The Witcher 3'));
+      expect(tapped, true);
+
+      await tester.tap(find.byIcon(Icons.delete_outline_rounded));
+      expect(deleted, true);
+
+      await tester.tap(find.byType(Switch));
+      expect(toggled, true);
     });
   });
 }
