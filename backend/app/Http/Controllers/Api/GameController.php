@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\GameResource;
 use App\Http\Resources\LibraryEntryResource;
 use App\Models\Game;
 use App\Models\Genre;
@@ -15,6 +16,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class GameController extends Controller
@@ -478,5 +480,319 @@ class GameController extends Controller
             'message' => 'Game tidak ditemukan atau layanan RAWG tidak dapat dijangkau.',
             'data'    => null,
         ], 404);
+    }
+
+    /**
+     * GET /api/recommendations
+     * Rekomendasi game serupa berdasarkan genre library pengguna.
+     */
+    public function recommendations(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $cacheKey = 'user_recommendations_' . $user->id;
+
+        if (Cache::has($cacheKey)) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Rekomendasi game berhasil diambil (dari cache)',
+                'data'    => Cache::get($cacheKey),
+            ], 200);
+        }
+
+        // 1. Hitung genre teratas (maksimal 3) dari library_entries pengguna lewat pivot game_genre
+        // Status Dropped tidak dihitung.
+        // Status Tamat atau Sedang Dimainkan mendapat bobot tambahan +1.
+        // Rating pribadi tinggi (>= 8) mendapat bobot tambahan +1.
+        $topGenres = DB::table('library_entries')
+            ->join('game_genre', 'library_entries.game_id', '=', 'game_genre.game_id')
+            ->join('genres', 'game_genre.genre_id', '=', 'genres.id')
+            ->where('library_entries.user_id', $user->id)
+            ->where('library_entries.status', '!=', 'Dropped')
+            ->select(
+                'genres.id as genre_id',
+                'genres.nama as genre_nama',
+                'genres.rawg_id as genre_rawg_id',
+                DB::raw('SUM(1 + (CASE WHEN library_entries.status IN (\'Tamat\', \'Sedang Dimainkan\') THEN 1 ELSE 0 END) + (CASE WHEN library_entries.rating_pribadi >= 8 THEN 1 ELSE 0 END)) as total_weight')
+            )
+            ->groupBy('genres.id', 'genres.nama', 'genres.rawg_id')
+            ->orderByDesc('total_weight')
+            ->orderBy('genres.nama', 'asc')
+            ->limit(3)
+            ->get();
+
+        if ($topGenres->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Belum ada rekomendasi. Tambahkan game ke library Anda untuk mendapatkan rekomendasi.',
+                'data'    => [],
+            ], 200);
+        }
+
+        $topGenreIds = $topGenres->pluck('genre_id')->toArray();
+
+        // Ambil seluruh game_id milik pengguna di library (semua status termasuk Wishlist)
+        $userGameIds = LibraryEntry::where('user_id', $user->id)->pluck('game_id')->toArray();
+
+        // 2. Ambil kandidat dari tabel games (cache database)
+        $candidates = $this->getCandidatesForGenres($topGenreIds, $userGameIds);
+
+        // 3. Bila kandidat dari cache kurang dari 10, lengkapi lewat RawgService untuk genre teratas
+        if ($candidates->count() < 10) {
+            $primaryGenre = $topGenres->first();
+            $rawgGenreParam = $primaryGenre->genre_rawg_id ?? $primaryGenre->genre_id;
+
+            try {
+                $rawgResponse = $this->rawgService->getGames([
+                    'genres'   => $rawgGenreParam,
+                    'ordering' => '-rating',
+                    'page'     => 1,
+                    'page_size' => 20,
+                ]);
+
+                if ($rawgResponse && !empty($rawgResponse['results'])) {
+                    foreach ($rawgResponse['results'] as $item) {
+                        $this->syncRawgGame($item);
+                    }
+                    $candidates = $this->getCandidatesForGenres($topGenreIds, $userGameIds);
+                }
+            } catch (Throwable $e) {
+                // Bila RAWG gagal dijangkau, kembalikan kandidat dari database saja tanpa galat
+            }
+        }
+
+        // Batasi maksimal 10
+        $finalCandidates = $candidates->take(10);
+
+        // Format alasan singkat untuk tiap game
+        $finalCandidates->each(function ($game) use ($topGenreIds) {
+            $matchingGenreNames = $game->genres
+                ->whereIn('id', $topGenreIds)
+                ->pluck('nama')
+                ->values()
+                ->toArray();
+
+            $game->alasan = $this->formatRecommendationReason($matchingGenreNames);
+        });
+
+        $resourceData = GameResource::collection($finalCandidates)->resolve();
+
+        // Cache hasil rekomendasi per pengguna selama 1 jam
+        Cache::put($cacheKey, $resourceData, now()->addHour());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Rekomendasi game berhasil diambil',
+            'data'    => $resourceData,
+        ], 200);
+    }
+
+    /**
+     * GET /api/games/{id}/similar
+     * Game serupa untuk satu game berdasarkan kesamaan genre.
+     */
+    public function similar(Request $request, $id): JsonResponse
+    {
+        $game = Game::with(['genres', 'platforms'])
+            ->where('id', $id)
+            ->orWhere('rawg_id', $id)
+            ->first();
+
+        // Bila belum ada di DB, coba ambil dari RAWG
+        if (! $game) {
+            try {
+                $rawgDetail = $this->rawgService->getGameDetail((int) $id);
+                if ($rawgDetail && isset($rawgDetail['id'])) {
+                    $game = $this->syncRawgGame($rawgDetail);
+                }
+            } catch (Throwable $e) {
+                $game = null;
+            }
+        }
+
+        if (! $game) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Game tidak ditemukan.',
+                'data'    => null,
+            ], 404);
+        }
+
+        $genreIds = $game->genres->pluck('id')->toArray();
+
+        if (empty($genreIds)) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Game serupa berhasil diambil',
+                'data'    => [],
+            ], 200);
+        }
+
+        // Ambil kandidat dari data cache database (tidak termasuk game itu sendiri)
+        $candidates = $this->getCandidatesForSimilar($game, $genreIds);
+
+        // Lengkapi lewat RAWG hanya bila kurang dari 5 hasil
+        if ($candidates->count() < 5) {
+            $firstGenre = $game->genres->first();
+            $rawgGenreParam = $firstGenre?->rawg_id ?? $firstGenre?->id;
+
+            if ($rawgGenreParam) {
+                try {
+                    $rawgResponse = $this->rawgService->getGames([
+                        'genres'   => $rawgGenreParam,
+                        'ordering' => '-rating',
+                        'page'     => 1,
+                        'page_size' => 20,
+                    ]);
+
+                    if ($rawgResponse && !empty($rawgResponse['results'])) {
+                        foreach ($rawgResponse['results'] as $item) {
+                            $this->syncRawgGame($item);
+                        }
+                        $candidates = $this->getCandidatesForSimilar($game, $genreIds);
+                    }
+                } catch (Throwable $e) {
+                    // RAWG gagal, kembalikan kandidat dari database saja tanpa galat
+                }
+            }
+        }
+
+        $finalCandidates = $candidates->take(10);
+        $resourceData = GameResource::collection($finalCandidates)->resolve();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Game serupa berhasil diambil',
+            'data'    => $resourceData,
+        ], 200);
+    }
+
+    /**
+     * Ambil kandidat game berdasarkan genre tertentu, kecuali game yang sudah dimiliki pengguna
+     */
+    protected function getCandidatesForGenres(array $genreIds, array $excludeGameIds)
+    {
+        return Game::with(['genres', 'platforms'])
+            ->whereHas('genres', function ($q) use ($genreIds) {
+                $q->whereIn('genres.id', $genreIds);
+            })
+            ->when(!empty($excludeGameIds), function ($q) use ($excludeGameIds) {
+                $q->whereNotIn('id', $excludeGameIds);
+            })
+            ->withCount(['genres as matching_genres_count' => function ($q) use ($genreIds) {
+                $q->whereIn('genres.id', $genreIds);
+            }])
+            ->orderByDesc('matching_genres_count')
+            ->orderByDesc('rating')
+            ->get();
+    }
+
+    /**
+     * Ambil kandidat game serupa berdasarkan genre, tidak termasuk game itu sendiri
+     */
+    protected function getCandidatesForSimilar(Game $game, array $genreIds)
+    {
+        return Game::with(['genres', 'platforms'])
+            ->where('id', '!=', $game->id)
+            ->when($game->rawg_id, fn($q) => $q->where('rawg_id', '!=', $game->rawg_id))
+            ->whereHas('genres', function ($q) use ($genreIds) {
+                $q->whereIn('genres.id', $genreIds);
+            })
+            ->withCount(['genres as matching_genres_count' => function ($q) use ($genreIds) {
+                $q->whereIn('genres.id', $genreIds);
+            }])
+            ->orderByDesc('matching_genres_count')
+            ->orderByDesc('rating')
+            ->get();
+    }
+
+    /**
+     * Format alasan singkat rekomendasi berdasarkan nama-nama genre yang cocok
+     */
+    protected function formatRecommendationReason(array $matchingGenreNames): string
+    {
+        if (empty($matchingGenreNames)) {
+            return 'Rekomendasi game populer untukmu';
+        }
+
+        if (count($matchingGenreNames) === 1) {
+            return 'Karena kamu suka ' . $matchingGenreNames[0];
+        }
+
+        if (count($matchingGenreNames) === 2) {
+            return 'Karena kamu suka ' . $matchingGenreNames[0] . ' dan ' . $matchingGenreNames[1];
+        }
+
+        $last = array_pop($matchingGenreNames);
+        return 'Karena kamu suka ' . implode(', ', $matchingGenreNames) . ' dan ' . $last;
+    }
+
+    /**
+     * Helper sinkronisasi/cache data game dari RAWG API ke tabel games & pivot
+     * Menghormati aturan cache 7 hari
+     */
+    public function syncRawgGame(array $item): Game
+    {
+        $rawgId = (int) $item['id'];
+        $itemRating = isset($item['rating']) ? (float) $item['rating'] : 0.0;
+        $judul = $item['name'] ?? 'Untitled Game';
+        $coverUrl = $item['background_image'] ?? null;
+        $tanggalRilis = !empty($item['released']) ? $item['released'] : null;
+
+        $game = Game::where('rawg_id', $rawgId)->first();
+        $shouldRefresh = false;
+
+        if (! $game) {
+            $game = new Game();
+            $game->rawg_id = $rawgId;
+            $shouldRefresh = true;
+        } elseif (! $game->cached_at || Carbon::parse($game->cached_at)->addDays(7)->isPast()) {
+            $shouldRefresh = true;
+        }
+
+        if ($shouldRefresh) {
+            $game->judul         = $judul;
+            $game->cover_url     = $coverUrl;
+            $game->rating        = $itemRating;
+            $game->tanggal_rilis = $tanggalRilis;
+            $game->cached_at     = now();
+            if (!empty($item['description_raw'])) {
+                $game->deskripsi = $item['description_raw'];
+            } elseif (!empty($item['description'])) {
+                $game->deskripsi = strip_tags($item['description']);
+            }
+            $game->save();
+
+            // Simpan relasi genre
+            if (!empty($item['genres'])) {
+                $genreIds = [];
+                foreach ($item['genres'] as $g) {
+                    $gModel = Genre::firstOrCreate(
+                        ['rawg_id' => $g['id']],
+                        ['nama' => $g['name']]
+                    );
+                    $genreIds[] = $gModel->id;
+                }
+                $game->genres()->sync($genreIds);
+            }
+
+            // Simpan relasi platform
+            if (!empty($item['platforms'])) {
+                $platformIds = [];
+                foreach ($item['platforms'] as $p) {
+                    $plat = $p['platform'] ?? $p;
+                    if (!empty($plat['id'])) {
+                        $pModel = Platform::firstOrCreate(
+                            ['rawg_id' => $plat['id']],
+                            ['nama' => $plat['name']]
+                        );
+                        $platformIds[] = $pModel->id;
+                    }
+                }
+                $game->platforms()->sync($platformIds);
+            }
+        }
+
+        $game->loadMissing(['genres', 'platforms']);
+        return $game;
     }
 }

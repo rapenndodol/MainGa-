@@ -31,8 +31,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::get('/user', [AuthController::class, 'me']);
 
-    // Tahap 2: Games, Genres, Platforms
+    // Tahap 2 & F-11: Games, Genres, Platforms, Recommendations, Similar Games
     Route::get('/games', [GameController::class, 'index']);
+    Route::get('/recommendations', [GameController::class, 'recommendations']);
+    Route::get('/games/{id}/similar', [GameController::class, 'similar']);
     Route::get('/games/{id}', [GameController::class, 'show']);
     Route::get('/genres', [GameController::class, 'genres']);
     Route::get('/platforms', [GameController::class, 'platforms']);
