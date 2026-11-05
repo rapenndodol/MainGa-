@@ -3,7 +3,9 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\GameController;
 use App\Http\Controllers\Api\LibraryController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PriceController;
+use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\WishlistController;
 use Illuminate\Support\Facades\Route;
 
@@ -35,9 +37,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/genres', [GameController::class, 'genres']);
     Route::get('/platforms', [GameController::class, 'platforms']);
 
-    // Tahap 3: Library Pribadi
+    // Tahap 3: Library Pribadi & Game Acak
     Route::get('/library', [LibraryController::class, 'index']);
     Route::post('/library', [LibraryController::class, 'store']);
+    Route::get('/library/random', [LibraryController::class, 'random']);
     Route::get('/library/{id}', [LibraryController::class, 'show']);
     Route::put('/library/{id}', [LibraryController::class, 'update']);
     Route::delete('/library/{id}', [LibraryController::class, 'destroy']);
@@ -49,4 +52,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/wishlist/{id}', [WishlistController::class, 'show']);
     Route::put('/wishlist/{id}', [WishlistController::class, 'update']);
     Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy']);
+
+    // Tahap 5: Notifikasi & Statistik
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::get('/stats', [StatsController::class, 'index']);
 });

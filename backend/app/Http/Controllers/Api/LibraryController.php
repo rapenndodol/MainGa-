@@ -300,4 +300,34 @@ class LibraryController extends Controller
             'data'    => null,
         ], 200);
     }
+
+    /**
+     * GET /api/library/random
+     * Mengembalikan satu entry library acak milik pengguna dengan status Backlog beserta data game-nya.
+     * Bila backlog kosong, mengembalikan respons HTTP 404 dengan pesan JSON yang jelas.
+     */
+    public function random(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $entry = LibraryEntry::with(['game.genres', 'game.platforms'])
+            ->where('user_id', $user->id)
+            ->where('status', 'Backlog')
+            ->inRandomOrder()
+            ->first();
+
+        if (! $entry) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Backlog kosong. Tambahkan game dengan status Backlog terlebih dahulu.',
+                'data'    => null,
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Game acak dari backlog berhasil dipilih',
+            'data'    => new LibraryEntryResource($entry),
+        ], 200);
+    }
 }

@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\Game;
+use App\Models\Notification;
 use App\Models\PriceHistory;
+use App\Models\WishlistAlert;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -356,9 +358,115 @@ class PriceService
                     ]);
                 }
             }
+
+            // Jalankan alur notifikasi penurunan harga untuk wishlist aktif
+            if (!empty($prices['cheapest'])) {
+                $this->notifyWishlistUsers(
+                    $game,
+                    (float) $prices['cheapest']['harga'],
+                    (string) $prices['cheapest']['toko']
+                );
+            }
         }
 
         return $prices;
+    }
+
+    /**
+     * Periksa wishlist_alerts aktif untuk game tertentu dan buat notifikasi
+     * jika harga terendah <= harga_target, serta cegah duplikasi jika harga tidak berubah.
+     *
+     * @param Game $game
+     * @param float|null $cheapestPrice
+     * @param string|null $cheapestStore
+     * @return int Jumlah notifikasi baru yang dibuat
+     */
+    public function notifyWishlistUsers(Game $game, ?float $cheapestPrice = null, ?string $cheapestStore = null): int
+    {
+        // Jika parameter harga belum diberikan, cari harga terendah dari riwayat harga terkini
+        if ($cheapestPrice === null) {
+            $latestPrice = PriceHistory::where('game_id', $game->id)
+                ->whereIn('id', function ($query) use ($game) {
+                    $query->selectRaw('MAX(id)')
+                        ->from('price_history')
+                        ->where('game_id', $game->id)
+                        ->groupBy('toko');
+                })
+                ->orderBy('harga', 'asc')
+                ->first();
+
+            if (! $latestPrice) {
+                return 0;
+            }
+
+            $cheapestPrice = (float) $latestPrice->harga;
+            $cheapestStore = $latestPrice->toko;
+        }
+
+        $cheapestStore = $cheapestStore ?: 'Toko';
+        $cheapestPrice = round($cheapestPrice, 2);
+
+        // Ambil semua wishlist_alerts yang AKTIF untuk game ini
+        $activeAlerts = WishlistAlert::where('game_id', $game->id)
+            ->where('aktif', true)
+            ->get();
+
+        $notificationsCreated = 0;
+
+        foreach ($activeAlerts as $alert) {
+            $targetPrice = round((float) $alert->harga_target, 2);
+
+            // Kondisi 1: Harga terendah <= harga_target
+            if ($cheapestPrice <= $targetPrice) {
+                // Cek notifikasi terakhir untuk user dan game ini
+                $lastNotification = Notification::where('user_id', $alert->user_id)
+                    ->where('game_id', $game->id)
+                    ->latest('id')
+                    ->first();
+
+                // Cegah duplikasi:
+                // Jangan membuat notifikasi baru untuk pengguna dan game yang sama selama harga terendah
+                // belum berubah dari harga pada notifikasi terakhir untuk game itu.
+                // Bila harga berubah (naik lalu turun lagi, atau turun lebih jauh) dan masih <= target, buat notifikasi baru.
+                if ($lastNotification) {
+                    $lastNotifPrice = round((float) $lastNotification->harga, 2);
+                    $priceIsSame = abs($lastNotifPrice - $cheapestPrice) < 0.001;
+
+                    if ($priceIsSame) {
+                        // Cek apakah pernah ada fluktuasi harga (naik lalu turun lagi) di price_history sejak notifikasi terakhir
+                        $hasFluctuated = PriceHistory::where('game_id', $game->id)
+                            ->where(function ($q) use ($lastNotification) {
+                                $q->where('dicek_pada', '>', $lastNotification->created_at)
+                                  ->orWhere('created_at', '>', $lastNotification->created_at);
+                            })
+                            ->where('harga', '!=', $lastNotifPrice)
+                            ->exists();
+
+                        if (! $hasFluctuated) {
+                            // Harga belum berubah dari notifikasi terakhir, jangan buat duplikat
+                            continue;
+                        }
+                    }
+                }
+
+                $formattedPrice = number_format($cheapestPrice, 2);
+                $formattedTarget = number_format($targetPrice, 2);
+
+                Notification::create([
+                    'user_id'     => $alert->user_id,
+                    'game_id'     => $game->id,
+                    'judul'       => $game->judul,
+                    'pesan'       => "Harga {$game->judul} turun menjadi \${$formattedPrice} di {$cheapestStore}! Sudah mencapai harga target Anda (\${$formattedTarget}).",
+                    'harga'       => $cheapestPrice,
+                    'toko'        => $cheapestStore,
+                    'dibaca_pada' => null,
+                ]);
+
+                $notificationsCreated++;
+            }
+        }
+
+        return $notificationsCreated;
     }
 
     /**

@@ -168,7 +168,12 @@ class WishlistController extends Controller
 
         // Setelah tersimpan, langsung lakukan satu kali pengecekan harga untuk game itu
         try {
-            $this->priceService->checkAndRecordPrices($game);
+            $priceResult = $this->priceService->checkAndRecordPrices($game);
+            // Bila CheapShark tidak mengembalikan deals baru tetapi game sudah memiliki riwayat harga sebelumnya,
+            // tetap jalankan alur notifikasi berdasarkan riwayat harga lokal yang sudah ada
+            if (! ($priceResult['available'] ?? false)) {
+                $this->priceService->notifyWishlistUsers($game);
+            }
         } catch (Throwable $e) {
             // Galat pada pengecekan CheapShark tidak boleh menggagalkan penambahan wishlist
         }
