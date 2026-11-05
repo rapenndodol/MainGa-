@@ -23,6 +23,7 @@ class GameModel {
   final int? hargaTerendahIdrEstimasi;
   final String? tokoTermurah;
   final List<dynamic>? hargaTerkini;
+  final String? alasan;
 
   const GameModel({
     required this.id,
@@ -47,6 +48,7 @@ class GameModel {
     this.hargaTerendahIdrEstimasi,
     this.tokoTermurah,
     this.hargaTerkini,
+    this.alasan,
   });
 
   /// Wishlist alert id jika game ada di wishlist
@@ -147,6 +149,7 @@ class GameModel {
       hargaTerendahIdrEstimasi: lowestPriceIdr,
       tokoTermurah: json['toko_termurah']?.toString(),
       hargaTerkini: json['harga_terkini'] is List ? json['harga_terkini'] as List : null,
+      alasan: json['alasan']?.toString(),
     );
   }
 
@@ -174,6 +177,7 @@ class GameModel {
       'harga_terendah_idr_estimasi': hargaTerendahIdrEstimasi,
       'toko_termurah': tokoTermurah,
       'harga_terkini': hargaTerkini,
+      'alasan': alasan,
     };
   }
 
@@ -202,6 +206,7 @@ class GameModel {
     int? hargaTerendahIdrEstimasi,
     String? tokoTermurah,
     List<dynamic>? hargaTerkini,
+    String? alasan,
   }) {
     return GameModel(
       id: id ?? this.id,
@@ -226,6 +231,7 @@ class GameModel {
       hargaTerendahIdrEstimasi: hargaTerendahIdrEstimasi ?? this.hargaTerendahIdrEstimasi,
       tokoTermurah: tokoTermurah ?? this.tokoTermurah,
       hargaTerkini: hargaTerkini ?? this.hargaTerkini,
+      alasan: alasan ?? this.alasan,
     );
   }
 }

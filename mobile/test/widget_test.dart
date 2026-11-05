@@ -7,6 +7,8 @@ import 'package:mobile/features/games/data/models/game_model.dart';
 import 'package:mobile/features/games/data/models/games_response_model.dart';
 import 'package:mobile/features/games/data/models/genre_model.dart';
 import 'package:mobile/features/games/data/models/platform_model.dart';
+import 'package:mobile/features/games/presentation/screens/explore_screen.dart';
+import 'package:mobile/features/games/presentation/screens/game_detail_screen.dart';
 import 'package:mobile/features/games/presentation/widgets/rawg_attribution.dart';
 import 'package:mobile/features/home/presentation/screens/home_screen.dart';
 import 'package:mobile/features/library/data/models/library_entry_model.dart';
@@ -160,6 +162,27 @@ void main() {
       expect(game.platforms.length, 2);
       expect(game.deskripsi, contains('Rockstar Games'));
       expect(game.libraryStatus, 'Sedang Dimainkan');
+    });
+
+    test('GameModel.fromJson parses alasan correctly for recommendations', () {
+      final json = {
+        'id': 101,
+        'rawg_id': 9999,
+        'judul': 'Cyberpunk 2077',
+        'rating': 4.5,
+        'genre': 'Action, RPG',
+        'genres': ['Action', 'RPG'],
+        'platform': 'PC',
+        'platforms': ['PC'],
+        'alasan': 'Karena kamu suka Action dan RPG',
+      };
+
+      final game = GameModel.fromJson(json);
+
+      expect(game.id, 101);
+      expect(game.rawgId, 9999);
+      expect(game.judul, 'Cyberpunk 2077');
+      expect(game.alasan, 'Karena kamu suka Action dan RPG');
     });
 
     test('GamesResponseModel.fromJson parses pagination and games list', () {
@@ -1003,6 +1026,44 @@ void main() {
 
       expect(find.byIcon(Icons.notifications_rounded), findsOneWidget);
       expect(find.text('Statistik Bermain'), findsOneWidget);
+    });
+
+    // ── F-11: ExploreScreen & GameDetailScreen Tests ────────────────
+    testWidgets('ExploreScreen renders search bar and filter controls', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const TestWrapper(
+          child: ExploreScreen(),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Jelajah Game'), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
+    });
+
+    testWidgets('GameDetailScreen builds and displays game title, rating, and description', (WidgetTester tester) async {
+      const mockGame = GameModel(
+        id: 1,
+        rawgId: 100,
+        judul: 'Elden Ring',
+        rating: 4.8,
+        genre: 'Action, RPG',
+        genres: ['Action', 'RPG'],
+        platform: 'PC',
+        platforms: ['PC'],
+        deskripsi: 'Action RPG game set in Lands Between.',
+      );
+
+      await tester.pumpWidget(
+        const TestWrapper(
+          child: GameDetailScreen(game: mockGame),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Elden Ring'), findsOneWidget);
+      expect(find.text('4.8'), findsOneWidget);
+      expect(find.text('Tentang Game'), findsOneWidget);
     });
   });
 }

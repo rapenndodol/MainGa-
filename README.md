@@ -829,3 +829,53 @@ Fitur Notifikasi in-app penurunan harga, Statistik bermain interaktif berbasis g
 ## 🧪 Hasil Pengujian Otomatis Mobile Terkini
 - **Flutter Analyzer**: `flutter analyze` -> **No issues found!** (0 error, 0 warning, 0 hint).
 - **Flutter Unit & Widget Tests**: `flutter test` -> **All 38 tests passed!** (100% lulus).
+
+---
+
+## 🎮 Tahap 6 / F-11: Rekomendasi Game Serupa & Berdasarkan Genre Library
+
+Tahap ini mengimplementasikan fitur F-11 sesuai spesifikasi PRD dan aturan `rules_mainga.md`, yang memberikan rekomendasi game terpersonalisasi berdasarkan preferensi genre di library pengguna serta menampilkan daftar game serupa pada layar detail game:
+
+### 1. Endpoint REST API Terproteksi (`auth:sanctum`)
+- `GET /api/recommendations`:
+  - Menghasilkan daftar rekomendasi game (maksimal 10) berdasarkan maksimal 3 genre teratas dari koleksi library milik pengguna yang sedang login.
+  - Setiap item game memuat field yang seragam dengan katalog game ditambah `alasan` singkat rekomendasi (misal: `"Karena kamu suka Action dan RPG"`).
+  - Mengambil kandidat dari data cache tabel `games` yang memiliki genre tersebut dan belum pernah ada di library pengguna (termasuk status Wishlist).
+  - Diurutkan berdasarkan jumlah kesesuaian genre teratas terbanyak, kemudian rating RAWG tertinggi.
+  - Jika kandidat di cache lokal kurang dari 10, backend melengkapi data lewat `RawgService` (`genres` genre teratas dan ordering `-rating`) dengan tetap menghormati aturan cache 7 hari.
+  - Bila RAWG tidak dapat dijangkau, sistem mengembalikan kandidat lokal yang ada secara aman tanpa error 500.
+  - Pengguna tanpa entri library (atau seluruhnya berstatus `Dropped`) menerima respons HTTP 200 dengan `data: []` dan pesan informatif `"Belum ada rekomendasi. Tambahkan game ke library Anda untuk mendapatkan rekomendasi."`.
+  - Hasil rekomendasi per pengguna di-cache di Laravel Cache selama 1 jam (`user_recommendations_{user_id}`) dan otomatis dihapus (*cache invalidation*) ketika entri library pengguna bertambah, berubah status, atau dihapus.
+- `GET /api/games/{id}/similar`:
+  - Menghasilkan daftar game serupa untuk suatu game spesifik berdasarkan kesamaan genre (diurutkan berdasarkan jumlah genre yang sama terbanyak, kemudian rating tertinggi).
+  - Maksimal 10 game, dan dijamin tidak memuat game target itu sendiri.
+  - Mengambil data dari cache database lokal, dan melengkapi lewat RAWG hanya jika hasil lokal kurang dari 5 game.
+
+### 2. Aturan Bobot Genre Perpustakaan Pengguna
+Penentuan maksimal 3 genre teratas dihitung melalui relasi pivot `game_genre` dari `library_entries` milik pengguna dengan formula pembobotan sederhana dan deterministik:
+- **Game Berstatus `Dropped`**: Diberi bobot `0` (diabaikan sepenuhnya dan tidak memengaruhi kalkulasi genre).
+- **Bobot Dasar (Base Weight)**: Setiap game berstatus `Wishlist`, `Backlog`, `Sedang Dimainkan`, atau `Tamat` memiliki bobot dasar `+1`.
+- **Tambahan Status Aktif / Tamat**: Game dengan status `Tamat` atau `Sedang Dimainkan` memperoleh bobot tambahan `+1`.
+- **Tambahan Rating Pribadi Tinggi**: Game dengan `rating_pribadi >= 8` (skala 1-10) memperoleh bobot tambahan `+1`.
+- **Total Akumulasi**: Setiap genre yang terhubung pada game tersebut menerima total bobot dari game bersangkutan (bobot 1 untuk Backlog/Wishlist biasa, bobot 2 untuk Tamat/Sedang Dimainkan atau Backlog dengan rating tinggi, dan bobot maksimal 3 untuk Tamat/Sedang Dimainkan dengan rating >= 8). Tiga genre dengan total skor tertinggi dipilih sebagai preferensi pengguna.
+
+### 3. Implementasi Mobile (Flutter)
+- **Tab Jelajah**:
+  - Bagian *"Rekomendasi untuk kamu"* ditampilkan berupa daftar horizontal di atas daftar utama katalog game.
+  - Bagian ini hanya tampil saat kolom pencarian kosong dan tidak ada filter aktif.
+  - Menampilkan kartu game rekomendasi (`cover`, `judul`, badge `rating`, dan teks `alasan` singkat). Ketukan pada kartu langsung membuka layar detail game.
+  - Bila rekomendasi belum tersedia (library kosong), ditampilkan pesan informatif *"Tambahkan game ke library untuk mendapat rekomendasi"*.
+  - Indikator pemuatan berukuran kecil dan tidak memblokir antarmuka Jelajah. Galat jaringan tidak merusak halaman Jelajah.
+  - Terintegrasi dengan `LibraryNotifier`: penambahan, pengubahan, atau penghapusan game di library langsung menyinkronkan rekomendasi pada kunjungan berikutnya tanpa perlu me-restart aplikasi.
+  - Mendukung *Pull-to-refresh* yang menyegarkan daftar game sekaligus rekomendasi pengguna.
+- **Layar Detail Game**:
+  - Bagian *"Game serupa"* ditampilkan berupa daftar horizontal kartu game dari endpoint `/api/games/{id}/similar`.
+  - Sembunyi secara otomatis bila tidak ada game serupa yang tersedia.
+
+### 4. Hasil Pengujian Otomatis Fitur F-11
+- **Backend (Laravel Feature Tests)**:
+  - `php artisan test --without-tty` -> **85 passed, 464 assertions, 0 failed**.
+  - Termasuk 10 test komprehensif pada `tests/Feature/RecommendationTest.php` yang menguji bobot genre, isolasi kepemilikan data antar pengguna, pengecualian game yang sudah dimiliki, pengabaian status Dropped, penanganan empty state, proteksi 401, invalidasi cache reaktif, fallback kegagalan RAWG, dan pencegahan duplikasi game itu sendiri pada similar games.
+- **Mobile (Flutter Tests & Analysis)**:
+  - `flutter analyze` -> **No issues found!** (0 error, 0 warning, 0 hint).
+  - `flutter test` -> **41 passed, 0 failed**.

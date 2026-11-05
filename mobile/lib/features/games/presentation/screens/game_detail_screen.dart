@@ -29,6 +29,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
   late GameModel _game;
   bool _isLoadingDetail = false;
   bool _isDescriptionExpanded = false;
+  List<GameModel> _similarGames = [];
   final _gameDataSource = GameRemoteDataSource();
 
   @override
@@ -116,18 +117,23 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
 
   Future<void> _fetchFullDetail() async {
     setState(() => _isLoadingDetail = true);
-    final detail =
-        await _gameDataSource.getGameDetail(_game.id > 0 ? _game.id : _game.rawgId);
+    final gameId = _game.id > 0 ? _game.id : _game.rawgId;
+    final detailFuture = _gameDataSource.getGameDetail(gameId);
+    final similarFuture = _gameDataSource.getSimilarGames(gameId);
+
+    final results = await Future.wait([detailFuture, similarFuture]);
     if (!mounted) return;
 
-    if (detail != null) {
-      setState(() {
+    final detail = results[0] as GameModel?;
+    final similar = results[1] as List<GameModel>;
+
+    setState(() {
+      if (detail != null) {
         _game = detail;
-        _isLoadingDetail = false;
-      });
-    } else {
-      setState(() => _isLoadingDetail = false);
-    }
+      }
+      _similarGames = similar;
+      _isLoadingDetail = false;
+    });
   }
 
   Future<void> _openLibraryForm() async {
@@ -479,6 +485,12 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                     gameIdOrRawgId: _game.id > 0 ? _game.id : _game.rawgId,
                   ),
 
+                  // ── Section: Game Serupa (F-11) ────────────────
+                  if (_similarGames.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.xxl),
+                    _buildSimilarGamesSection(),
+                  ],
+
                   const SizedBox(height: AppSpacing.xxl),
 
                   // ── Atribusi RAWG dengan link aktif ────────────
@@ -490,6 +502,145 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSimilarGamesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Game Serupa',
+          style: AppTypography.titleMedium.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        SizedBox(
+          height: 180,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: _similarGames.length,
+            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
+            itemBuilder: (context, index) {
+              final simGame = _similarGames[index];
+              return Container(
+                width: 140,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: AppRadius.mdBorderRadius,
+                  border: Border.all(color: AppColors.border, width: 1),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => GameDetailScreen(game: simGame),
+                        ),
+                      );
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Cover & Rating
+                        Stack(
+                          children: [
+                            SizedBox(
+                              width: 140,
+                              height: 95,
+                              child: simGame.coverUrl != null &&
+                                      simGame.coverUrl!.isNotEmpty
+                                  ? Image.network(
+                                      simGame.coverUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, _, _) =>
+                                          _buildCoverFallback(),
+                                    )
+                                  : _buildCoverFallback(),
+                            ),
+                            Positioned(
+                              top: 6,
+                              right: 6,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.75),
+                                  borderRadius: AppRadius.fullBorderRadius,
+                                  border: Border.all(
+                                    color: AppColors.border.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.star_rounded,
+                                      size: 12,
+                                      color: AppColors.ratingStar,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      simGame.rating.toStringAsFixed(1),
+                                      style: const TextStyle(
+                                        color: AppColors.ratingStar,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Title & Genre
+                        Padding(
+                          padding: const EdgeInsets.all(AppSpacing.sm),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                simGame.judul,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              if (simGame.genre.isNotEmpty)
+                                Text(
+                                  simGame.genre,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 

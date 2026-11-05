@@ -21,6 +21,8 @@ class ApiConstants {
   static const String gamesEndpoint = '$baseUrl/games';
   static const String genresEndpoint = '$baseUrl/genres';
   static const String platformsEndpoint = '$baseUrl/platforms';
+  static const String recommendationsEndpoint = '$baseUrl/recommendations';
+  static String gameSimilarEndpoint(dynamic id) => '$baseUrl/games/$id/similar';
 
   // Library Endpoints (Tahap 3 & US-08)
   static const String libraryEndpoint = '$baseUrl/library';
