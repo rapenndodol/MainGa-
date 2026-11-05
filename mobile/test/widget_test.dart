@@ -19,6 +19,16 @@ import 'package:mobile/features/wishlist/data/models/wishlist_item_model.dart';
 import 'package:mobile/features/wishlist/data/models/wishlist_response_model.dart';
 import 'package:mobile/features/wishlist/data/models/game_price_model.dart';
 import 'package:mobile/features/wishlist/presentation/widgets/wishlist_game_card.dart';
+import 'package:mobile/features/notifications/data/models/notification_model.dart';
+import 'package:mobile/features/notifications/data/models/notifications_response_model.dart';
+import 'package:mobile/features/notifications/presentation/controllers/notification_notifier.dart';
+import 'package:mobile/features/notifications/presentation/widgets/notification_card.dart';
+import 'package:mobile/features/stats/data/models/user_stats_model.dart';
+import 'package:mobile/features/stats/presentation/widgets/summary_stats_row.dart';
+import 'package:mobile/features/stats/presentation/widgets/monthly_completed_chart.dart';
+import 'package:mobile/features/stats/presentation/widgets/favorite_genres_chart.dart';
+import 'package:mobile/features/library/presentation/widgets/random_game_sheet.dart';
+import 'package:mobile/features/profile/presentation/screens/profile_screen.dart';
 import 'package:mobile/core/widgets/app_badge.dart';
 import 'package:mobile/core/widgets/app_button.dart';
 import 'package:mobile/core/widgets/app_empty_state.dart';
@@ -416,6 +426,128 @@ void main() {
       expect(res.hargaTerkini.first.toko, 'Epic Games Store');
       expect(res.hargaTerkini.first.diskonPersen, 40.0);
     });
+
+    test('NotificationModel.fromJson parses unread notification correctly', () {
+      final json = {
+        'id': 1,
+        'user_id': 5,
+        'game_id': 10,
+        'judul': 'Diskon The Witcher 3',
+        'judul_game': 'The Witcher 3: Wild Hunt',
+        'pesan': 'Harga turun mencapai target di Steam!',
+        'harga': 14.99,
+        'toko': 'Steam',
+        'dibaca_pada': null,
+        'sudah_dibaca': false,
+        'status_dibaca': 'belum_dibaca',
+        'waktu': '2026-11-05T10:00:00Z',
+        'created_at': '2026-11-05T10:00:00Z',
+        'game': {
+          'id': 10,
+          'judul': 'The Witcher 3: Wild Hunt',
+          'cover_url': 'https://media.rawg.io/witcher3.jpg',
+        },
+      };
+
+      final notification = NotificationModel.fromJson(json);
+
+      expect(notification.id, 1);
+      expect(notification.userId, 5);
+      expect(notification.gameId, 10);
+      expect(notification.judulGame, 'The Witcher 3: Wild Hunt');
+      expect(notification.pesan, 'Harga turun mencapai target di Steam!');
+      expect(notification.harga, 14.99);
+      expect(notification.toko, 'Steam');
+      expect(notification.sudahDibaca, false);
+      expect(notification.game?.coverUrl, 'https://media.rawg.io/witcher3.jpg');
+    });
+
+    test('NotificationsResponseModel.fromJson parses list and pagination correctly', () {
+      final json = {
+        'success': true,
+        'message': 'Daftar notifikasi berhasil diambil',
+        'data': {
+          'notifications': [
+            {
+              'id': 1,
+              'user_id': 5,
+              'game_id': 10,
+              'judul': 'Game Diskon',
+              'judul_game': 'Hades',
+              'pesan': 'Hades mencapai target harga di Epic Games Store',
+              'harga': 9.99,
+              'toko': 'Epic Games Store',
+              'dibaca_pada': '2026-11-05T12:00:00Z',
+              'sudah_dibaca': true,
+              'status_dibaca': 'dibaca',
+            }
+          ],
+          'pagination': {
+            'current_page': 1,
+            'last_page': 1,
+            'per_page': 15,
+            'total': 1,
+          }
+        }
+      };
+
+      final res = NotificationsResponseModel.fromJson(json);
+
+      expect(res.success, true);
+      expect(res.notifications.length, 1);
+      expect(res.notifications.first.judulGame, 'Hades');
+      expect(res.notifications.first.sudahDibaca, true);
+      expect(res.total, 1);
+    });
+
+    test('UserStatsModel.fromJson parses statistics, months, and genres correctly', () {
+      final json = {
+        'total_game': 15,
+        'total_jam': 120.5,
+        'jumlah_tamat': 5,
+        'game_tamat_per_bulan': [
+          {
+            'periode': '2026-11',
+            'label': 'Nov 2026',
+            'bulan': 'Nov 2026',
+            'jumlah': 2,
+          },
+          {
+            'periode': '2026-10',
+            'label': 'Oct 2026',
+            'bulan': 'Oct 2026',
+            'jumlah': 3,
+          }
+        ],
+        'genre_favorit': [
+          {'nama': 'RPG', 'genre': 'RPG', 'jumlah': 7},
+          {'nama': 'Action', 'genre': 'Action', 'jumlah': 5},
+        ]
+      };
+
+      final stats = UserStatsModel.fromJson(json);
+
+      expect(stats.totalGame, 15);
+      expect(stats.totalJam, 120.5);
+      expect(stats.jumlahTamat, 5);
+      expect(stats.gameTamatPerBulan.length, 2);
+      expect(stats.gameTamatPerBulan.first.shortMonth, 'Nov');
+      expect(stats.genreFavorit.length, 2);
+      expect(stats.genreFavorit.first.nama, 'RPG');
+      expect(stats.isEmpty, false);
+      expect(stats.hasCompletedGames, true);
+      expect(stats.hasFavoriteGenres, true);
+    });
+
+    test('UserStatsModel.empty returns clean empty state', () {
+      const stats = UserStatsModel.empty;
+      expect(stats.totalGame, 0);
+      expect(stats.totalJam, 0.0);
+      expect(stats.jumlahTamat, 0);
+      expect(stats.isEmpty, true);
+      expect(stats.gameTamatPerBulan, isEmpty);
+      expect(stats.genreFavorit, isEmpty);
+    });
   });
 
   group('Widget Tests', () {
@@ -675,6 +807,202 @@ void main() {
 
       await tester.tap(find.byType(Switch));
       expect(toggled, true);
+    });
+
+    // ── US-06: NotificationCard Widget Test ────────────────────
+    testWidgets('NotificationCard renders notification details and unread indicator', (WidgetTester tester) async {
+      bool tapped = false;
+
+      const notification = NotificationModel(
+        id: 1,
+        userId: 1,
+        gameId: 10,
+        judul: 'Diskon Spesial',
+        judulGame: 'Hollow Knight',
+        pesan: 'Harga turun menjadi \$7.49 di Steam',
+        harga: 7.49,
+        toko: 'Steam',
+        sudahDibaca: false,
+        statusDibaca: 'belum_dibaca',
+        waktu: '2026-11-05T09:00:00Z',
+      );
+
+      await tester.pumpWidget(
+        TestWrapper(
+          child: Scaffold(
+            body: NotificationCard(
+              notification: notification,
+              onTap: () => tapped = true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Hollow Knight'), findsOneWidget);
+      expect(find.text('Harga turun menjadi \$7.49 di Steam'), findsOneWidget);
+      expect(find.text('Steam'), findsOneWidget);
+      expect(find.text('\$7.49'), findsOneWidget);
+
+      await tester.tap(find.text('Hollow Knight'));
+      expect(tapped, true);
+    });
+
+    // ── US-07: SummaryStatsRow Widget Test ─────────────────────
+    testWidgets('SummaryStatsRow renders statistics values correctly', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const TestWrapper(
+          child: Scaffold(
+            body: SummaryStatsRow(
+              totalGame: 12,
+              totalJam: 45.5,
+              jumlahTamat: 4,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('12'), findsOneWidget);
+      expect(find.text('Total Game'), findsOneWidget);
+      expect(find.text('45.5j'), findsOneWidget);
+      expect(find.text('Jam Bermain'), findsOneWidget);
+      expect(find.text('4'), findsOneWidget);
+      expect(find.text('Game Tamat'), findsOneWidget);
+    });
+
+    // ── US-07: MonthlyCompletedChart Widget Test ───────────────
+    testWidgets('MonthlyCompletedChart renders title and bar chart container', (WidgetTester tester) async {
+      const data = [
+        MonthlyCompletedStats(
+          periode: '2026-10',
+          label: 'Oct 2026',
+          bulan: 'Oct 2026',
+          jumlah: 2,
+        ),
+        MonthlyCompletedStats(
+          periode: '2026-11',
+          label: 'Nov 2026',
+          bulan: 'Nov 2026',
+          jumlah: 1,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        const TestWrapper(
+          child: Scaffold(
+            body: MonthlyCompletedChart(data: data),
+          ),
+        ),
+      );
+
+      expect(find.text('Game Tamat'), findsOneWidget);
+      expect(find.text('12 Bulan Terakhir'), findsOneWidget);
+    });
+
+    // ── US-07: FavoriteGenresChart Widget Test ─────────────────
+    testWidgets('FavoriteGenresChart renders genre breakdown and legend', (WidgetTester tester) async {
+      const genres = [
+        GenreStats(nama: 'Action', genre: 'Action', jumlah: 8),
+        GenreStats(nama: 'RPG', genre: 'RPG', jumlah: 4),
+      ];
+
+      await tester.pumpWidget(
+        const TestWrapper(
+          child: Scaffold(
+            body: FavoriteGenresChart(genres: genres),
+          ),
+        ),
+      );
+
+      expect(find.text('Genre Favorit'), findsOneWidget);
+      expect(find.text('Action'), findsOneWidget);
+      expect(find.text('RPG'), findsOneWidget);
+      expect(find.text('8 game (67%)'), findsOneWidget);
+      expect(find.text('4 game (33%)'), findsOneWidget);
+    });
+
+    // ── US-08: RandomGameSheet Widget Test ──────────────────────
+    testWidgets('RandomGameSheet renders chosen backlog game and action buttons', (WidgetTester tester) async {
+      const entry = LibraryEntryModel(
+        id: 99,
+        userId: 1,
+        gameId: 42,
+        status: 'Backlog',
+        jamMain: 0,
+        judul: 'Celeste',
+        coverUrl: 'https://media.rawg.io/celeste.jpg',
+        gameRating: 4.9,
+        genre: 'Platformer',
+        platform: 'PC',
+      );
+
+      await tester.pumpWidget(
+        const TestWrapper(
+          child: Scaffold(
+            body: RandomGameSheet(initialEntry: entry),
+          ),
+        ),
+      );
+
+      expect(find.text('Acak Game Backlog'), findsOneWidget);
+      expect(find.text('Celeste'), findsOneWidget);
+      expect(find.text('Platformer'), findsOneWidget);
+      expect(find.text('4.9'), findsOneWidget);
+      expect(find.text('Mainkan Sekarang'), findsOneWidget);
+      expect(find.text('Acak Ulang'), findsOneWidget);
+    });
+
+    testWidgets('RandomGameSheet renders empty backlog message when backlog is empty', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const TestWrapper(
+          child: Scaffold(
+            body: RandomGameSheet(initialBacklogEmpty: true),
+          ),
+        ),
+      );
+
+      expect(find.text('Backlog Kosong'), findsOneWidget);
+      expect(find.text('Backlog kosong. Tambahkan game dengan status Backlog dulu.'), findsOneWidget);
+      expect(find.text('Mengerti'), findsOneWidget);
+    });
+
+    // ── US-06: NotificationNotifier State Management ────────────
+    test('NotificationNotifier manages unread count state properly', () {
+      final notifier = NotificationNotifier.instance;
+
+      notifier.setUnreadCount(5);
+      expect(notifier.unreadCount, 5);
+
+      notifier.decrementUnreadCount(by: 2);
+      expect(notifier.unreadCount, 3);
+
+      notifier.decrementUnreadCount(by: 10);
+      expect(notifier.unreadCount, 0);
+    });
+
+    // ── US-08: LibraryScreen renders Acak Button ────────────────
+    testWidgets('LibraryScreen renders Acak button in app bar', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const TestWrapper(
+          child: LibraryScreen(),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Acak'), findsOneWidget);
+      expect(find.byIcon(Icons.casino_rounded), findsOneWidget);
+    });
+
+    // ── US-06 & US-07: ProfileScreen Notification Bell & Stats Widget Test ──
+    testWidgets('ProfileScreen renders notification bell icon and stats section', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const TestWrapper(
+          child: ProfileScreen(),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byIcon(Icons.notifications_rounded), findsOneWidget);
+      expect(find.text('Statistik Bermain'), findsOneWidget);
     });
   });
 }

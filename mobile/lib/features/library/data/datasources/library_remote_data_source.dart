@@ -220,4 +220,57 @@ class LibraryRemoteDataSource {
       };
     }
   }
+
+  /// Ambil satu game acak dari backlog (US-08)
+  Future<Map<String, dynamic>> getRandomBacklogGame() async {
+    final uri = Uri.parse(ApiConstants.libraryRandomEndpoint);
+
+    try {
+      final headers = await _getHeaders();
+      final response = await client.get(uri, headers: headers).timeout(_timeout);
+
+      final Map<String, dynamic> body = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (response.statusCode == 200 && body['success'] == true && body['data'] != null) {
+        return {
+          'success': true,
+          'isEmptyBacklog': false,
+          'message': body['message'] ?? 'Game acak berhasil dipilih',
+          'entry': LibraryEntryModel.fromJson(body['data'] as Map<String, dynamic>),
+        };
+      }
+
+      if (response.statusCode == 404) {
+        return {
+          'success': false,
+          'isEmptyBacklog': true,
+          'message': body['message'] ?? 'Backlog kosong. Tambahkan game dengan status Backlog dulu.',
+        };
+      }
+
+      return {
+        'success': false,
+        'isEmptyBacklog': false,
+        'message': body['message'] ?? 'Gagal mengambil game acak.',
+      };
+    } on SocketException {
+      return {
+        'success': false,
+        'isEmptyBacklog': false,
+        'message': 'Koneksi gagal. Periksa jaringan Anda.',
+      };
+    } on TimeoutException {
+      return {
+        'success': false,
+        'isEmptyBacklog': false,
+        'message': 'Permintaan timeout. Server tidak merespons.',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'isEmptyBacklog': false,
+        'message': 'Terjadi kesalahan: $e',
+      };
+    }
+  }
 }

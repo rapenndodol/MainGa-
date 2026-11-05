@@ -681,3 +681,151 @@ php artisan db:seed --class=PriceHistoryDemoSeeder
 3. **Backend Feature Tests**:
    - Perintah: `cd backend; php artisan test --without-tty`
    - Hasil: **51 passed, 263 assertions, 0 failed**.
+
+---
+
+## 🔔 Tahap 5: Backend Notifikasi, Statistik Bermain, dan Game Acak (US-06, US-07, US-08)
+
+Tahap 5 mengimplementasikan backend lengkap untuk notifikasi penurunan harga real-time, statistik kebiasaan bermain teragregasi, pemilihan game acak dari backlog, serta artisan command simulator harga sesuai [PRD](rules/PRD_MainGA.md) dan aturan [rules_mainga.md](rules/rules_mainga.md):
+
+### 1. Notifikasi Penurunan Harga (US-06, FR-10, FR-11)
+- **Alur Pemicu Otomatis**:
+  - Dijalankan pada command scheduler `prices:check` dan saat penambahan wishlist pertama kali via `POST /api/wishlist`.
+  - Membandingkan harga terendah game dengan `harga_target` seluruh entri `wishlist_alerts` aktif (`aktif = true`) milik semua pengguna yang memantau game tersebut.
+  - Jika `harga_terendah <= harga_target`, notifikasi baru dibuat di tabel `notifications` berisi `game_id`, `judul` (nama game), `pesan` informatif, `harga`, dan nama `toko` termurah.
+- **Pencegahan Duplikasi & Deteksi Perubahan Harga**:
+  - Sistem tidak membuat notifikasi baru bila harga terendah belum berubah dari harga pada notifikasi terakhir untuk user dan game tersebut.
+  - Bila harga berubah (turun lebih jauh, atau naik lalu turun kembali ke bawah/sama dengan target), notifikasi baru diterbitkan secara otomatis.
+  - Wishlist nonaktif tidak memicu notifikasi.
+  - Setiap pengguna yang memantau game yang sama dievaluasi dan menerima notifikasi masing-masing.
+- **Endpoints Terproteksi Sanctum (`auth:sanctum`)**:
+  - `GET /api/notifications` : Mengambil daftar notifikasi milik pengguna yang login (diurutkan kronologis terbaru, pagination, memuat judul game, toko, harga, waktu pembuatan, dan status dibaca).
+  - `GET /api/notifications/unread-count` : Menghitung jumlah notifikasi yang belum dibaca (`dibaca_pada` null).
+  - `PUT /api/notifications/{id}/read` : Menandai notifikasi sebagai dibaca (`dibaca_pada` terisi waktu sekarang). Mengembalikan status HTTP 403 bila notifikasi milik pengguna lain, atau 404 jika tidak ditemukan.
+  - `PUT /api/notifications/read-all` : Menandai seluruh notifikasi belum dibaca milik pengguna yang login sebagai sudah dibaca secara massal.
+
+### 2. Statistik Bermain (US-07, FR-12)
+- **Agregasi Query Efisien**:
+  - Dihitung langsung menggunakan agregasi SQL basis data (`COUNT`, `SUM`, `GROUP BY`) tanpa memuat seluruh koleksi ke memori aplikasi.
+- **Endpoint Terproteksi Sanctum (`auth:sanctum`)**:
+  - `GET /api/stats` : Mengembalikan metrik statistik bermain milik pengguna yang login:
+    - `total_game` : Total game yang ada di library pengguna.
+    - `total_jam` : Akumulasi jam bermain (`jam_main`) dari library pengguna.
+    - `jumlah_tamat` : Total game berstatus `Tamat`.
+    - `game_tamat_per_bulan` : Agregasi jumlah game tamat selama 12 bulan terakhir berdasarkan `tanggal_tamat`. Bulan tanpa data tetap dikembalikan dengan nilai `0`, diurutkan kronologis dari terlama ke terbaru dengan label bulan yang mudah dibaca (misal `"Nov 2026"`).
+    - `genre_favorit` : Maksimal 5 genre teratas dari game yang dimiliki pengguna di library (dihitung lewat pivot `game_genre` dan master `genres`), berisi nama genre dan jumlah frekuensinya.
+    - Pengguna baru tanpa data library otomatis mendapatkan nilai 0 dan daftar kosong tanpa galat (HTTP 200).
+
+### 3. Game Acak dari Backlog (US-08, FR-15)
+- **Endpoint Terproteksi Sanctum (`auth:sanctum`)**:
+  - `GET /api/library/random` : Mengembalikan satu entri library acak milik pengguna yang berstatus `Backlog` beserta relasi data game-nya (`LibraryEntryResource`).
+  - **Penanganan Backlog Kosong**: Bila pengguna tidak memiliki game berstatus Backlog, endpoint mengembalikan respons HTTP `404 Not Found` dengan payload JSON yang jelas (`"success": false`, `"message": "Backlog kosong. Tambahkan game dengan status Backlog terlebih dahulu."`, `"data": null`).
+  - **Pencegahan Tabrakan Rute**: Rute ini didaftarkan sebelum rute `/library/{id}` pada `routes/api.php` agar tidak tertukar dengan parameter ID.
+  - Pembaruan status game terpilih ke `Sedang Dimainkan` dapat langsung dilakukan menggunakan endpoint yang sudah tersedia: `PUT /api/library/{id}` dengan body `{"status": "Sedang Dimainkan"}`.
+
+### 4. Perintah Simulasi Harga untuk Demo & Pengujian Lokal
+Untuk kebutuhan pengujian lokal dan demonstrasi tanpa harus menunggu penjadwalan scheduler atau ketergantungan koneksi CheapShark, disediakan command artisan:
+```bash
+cd backend
+php artisan prices:simulate {game_id} {harga}
+```
+- **Contoh**:
+  ```bash
+  cd backend
+  php artisan prices:simulate 1 19.99
+  ```
+- **Mekanisme**:
+  - Menyimpan satu baris riwayat harga di tabel `price_history` dengan toko `"Simulasi"` dan nominal harga sesuai argumen.
+  - Menjalankan logika pembuatan notifikasi penurunan harga secara otomatis sebagaimana alur pengecekan harga sungguhan.
+  - **Proteksi Lingkungan**: Command ini menolak dijalankan di lingkungan `production` dan hanya diizinkan di lingkungan non-production (`local` / `testing`).
+
+---
+
+## 🧪 Hasil Pengujian Otomatis Tahap 5
+
+Pengujian backend otomatis dijalankan dengan:
+```bash
+cd backend
+php artisan test --without-tty
+```
+
+Hasil pengujian: **75 passed, 418 assertions, 0 failed** (100% lulus dalam ~2 detik).
+
+Mencakup 24 pengujian baru:
+1. `tests/Feature/NotificationTest.php` (13 tests):
+   - ✅ Notifikasi dibuat tepat saat harga terendah <= harga target.
+   - ✅ Notifikasi tidak dibuat saat harga terendah masih di atas target.
+   - ✅ Pencegahan duplikasi: tidak membuat notifikasi baru untuk harga yang sama.
+   - ✅ Notifikasi dibuat kembali saat harga berubah (turun lebih jauh, atau naik lalu turun lagi).
+   - ✅ Wishlist nonaktif (`aktif = false`) tidak menghasilkan notifikasi.
+   - ✅ Beberapa pengguna yang memantau game yang sama menerima notifikasi masing-masing sesuai targetnya.
+   - ✅ Pengecekan awal saat `POST /api/wishlist` langsung memicu notifikasi jika harga memenuhi target.
+   - ✅ Endpoint `GET /api/notifications` mengembalikan daftar terurut terbaru dengan pagination dan data lengkap.
+   - ✅ Endpoint `GET /api/notifications/unread-count` menghitung jumlah belum dibaca secara akurat.
+   - ✅ Endpoint `PUT /api/notifications/{id}/read` menandai notifikasi dibaca dan mengisi `dibaca_pada`.
+   - ✅ Endpoint `PUT /api/notifications/read-all` menandai seluruh notifikasi user sebagai dibaca.
+   - ✅ Proteksi notifikasi: notifikasi pengguna lain mengembalikan status HTTP 403.
+   - ✅ Seluruh endpoint notifikasi mengembalikan 401 jika diakses tanpa token autentikasi.
+
+2. `tests/Feature/StatsTest.php` (4 tests):
+   - ✅ Pengguna tanpa data library mengembalikan nilai 0, 12 bulan bernilai 0, dan array genre kosong tanpa galat (200 OK).
+   - ✅ Statistik dihitung akurat untuk library campuran (total game, total jam, jumlah tamat, 12 bulan terakhir kronologis, top 5 genre favorit).
+   - ✅ Agregasi statistik hanya menghitung data milik pengguna yang login (terisolasi dari pengguna lain).
+   - ✅ Akses endpoint statistik tanpa token mengembalikan status 401.
+
+3. `tests/Feature/RandomGameTest.php` (4 tests):
+   - ✅ Game acak memilih HANYA dari game berstatus Backlog milik pengguna.
+   - ✅ Bila backlog kosong, mengembalikan respons HTTP 404 dengan pesan JSON yang jelas.
+   - ✅ Game acak hanya memilih dari data library milik pengguna sendiri.
+   - ✅ Akses endpoint random tanpa token mengembalikan status 401.
+
+4. `tests/Feature/PriceSimulateCommandTest.php` (3 tests):
+   - ✅ Command `prices:simulate` menolak berjalan di lingkungan production.
+   - ✅ Command mencatat riwayat harga simulasi dan memicu alur pembuatan notifikasi penurunan harga.
+   - ✅ Validasi masukan: penolakan bila game tidak ditemukan, harga bukan angka, atau harga bernilai negatif.
+
+
+---
+
+## 📱 Implementasi Mobile: Notifikasi, Statistik, dan Fitur Acak (US-06, US-07, US-08)
+
+Fitur Notifikasi in-app penurunan harga, Statistik bermain interaktif berbasis grafik `fl_chart`, serta fitur Acak game dari backlog telah selesai diimplementasikan pada aplikasi Flutter sesuai spesifikasi [PRD](rules/PRD_MainGA.md) dan aturan [rules_mainga.md](rules/rules_mainga.md):
+
+### 1. Notifikasi In-App (US-06)
+- **Ikon Lonceng & Badge Dinamis**:
+  - Disematkan pada AppBar di Tab Profil dengan badge jumlah notifikasi yang belum dibaca (`unread_count`).
+  - Badge tersembunyi secara otomatis bila jumlah belum dibaca bernilai 0.
+  - Nilai badge disinkronkan secara efisien dari endpoint `/api/notifications/unread-count` saat aplikasi dibuka, saat pengguna membuka tab Profil, dan saat pengguna melakukan *pull-to-refresh* (tanpa polling terus-menerus).
+- **Layar Notifikasi (`NotificationScreen`)**:
+  - Menampilkan daftar notifikasi penurunan harga terurut terbaru (`NotificationCard`): judul game, pesan, toko termurah, harga dalam USD, waktu relatif ("Baru saja", "2 jam lalu", "Kemarin", dll.), dan penanda belum dibaca (*accent dot* & *highlight* kartu).
+  - Ketuk notifikasi: langsung menandai notifikasi tersebut sebagai sudah dibaca via `PUT /api/notifications/{id}/read`, memperbarui badge secara lokal, dan menavigasi pengguna ke layar detail game terkait (`GameDetailScreen`).
+  - Tombol *"Tandai semua dibaca"* di AppBar untuk menandai seluruh notifikasi sekaligus via `PUT /api/notifications/read-all`.
+  - Penanganan state lengkap: *Pull-to-refresh*, *pagination infinite scroll*, *loading shimmer skeleton*, *error state* dengan tombol coba lagi, serta *empty state* ramah (*"Belum ada notifikasi"*).
+
+### 2. Statistik Bermain (US-07)
+- **Ringkasan Metrik (`SummaryStatsRow`)**:
+  - Menampilkan 3 kartu ringkasan: Total Game, Jam Bermain (akumulasi `jam_main`), dan Game Tamat (total game berstatus `Tamat`).
+- **Visualisasi Grafik `fl_chart`**:
+  - **Grafik Batang Game Tamat per 12 Bulan Terakhir (`MonthlyCompletedChart`)**: Visualisasi batang `BarChart` beraksen Coral Terracotta (`#E14B44`), label bulan singkat pada sumbu X, grid garis halus, dan tooltip interaktif saat disentuh yang menampilkan jumlah game tamat pada bulan terkait.
+  - **Grafik Donut/Lingkaran Genre Favorit (`FavoriteGenresChart`)**: Visualisasi `PieChart` untuk maksimal 5 genre teratas di library pengguna, dilengkapi persentase dan daftar legenda warna informatif.
+- **Tampilan Kosong yang Informatif**:
+  - Pengguna tanpa data game/library melihat pesan informatif (*"Belum ada data. Tambahkan game ke library untuk melihat statistikmu."*), bukan galat atau grafik rusak.
+- **Pull-to-Refresh & Sinkronisasi Reaktif**:
+  - Halaman profil mendukung *pull-to-refresh* untuk menyegarkan profil, statistik, dan badge notifikasi.
+  - Terintegrasi dengan `LibraryNotifier.instance`: setiap kali ada penambahan, pembaruan, atau penghapusan game di library, tampilan statistik otomatis ter-update seketika.
+
+### 3. Fitur Acak Game Backlog (US-08)
+- **Tombol Acak di Tab Library**:
+  - Tombol aksi pill *"Acak"* dengan ikon dadu (`Icons.casino_rounded`) disematkan secara jelas terlihat di AppBar Tab Library.
+- **Modal Bottom Sheet Rekomendasi Game (`RandomGameSheet`)**:
+  - Menampilkan game acak yang diambil dari endpoint `GET /api/library/random`: cover game dengan overlay gradient scrim, judul game, genre chip, dan rating bintang.
+  - Dua aksi interaktif:
+    1. *"Mainkan sekarang"*: Mengubah status game terpilih menjadi `Sedang Dimainkan` via endpoint `PUT /api/library/{id}`, memperbarui Tab Library secara reaktif, menutup sheet, dan memberikan notifikasi feedback SnackBar.
+    2. *"Acak ulang"*: Mengambil kembali game acak berikutnya dari backlog dengan animasi loading yang mulus di dalam sheet.
+  - **Penanganan Backlog Kosong**: Bila pengguna tidak memiliki game berstatus Backlog (HTTP 404), sheet menampilkan pesan penjelasan ramah (*"Backlog kosong. Tambahkan game dengan status Backlog dulu."*) beserta tombol penutup.
+
+---
+
+## 🧪 Hasil Pengujian Otomatis Mobile Terkini
+- **Flutter Analyzer**: `flutter analyze` -> **No issues found!** (0 error, 0 warning, 0 hint).
+- **Flutter Unit & Widget Tests**: `flutter test` -> **All 38 tests passed!** (100% lulus).
