@@ -10,7 +10,7 @@ export 'app_spacing.dart';
 export 'app_typography.dart';
 
 /// Single source of truth tema aplikasi MainGa?.
-/// Menghadirkan identitas visual warm dark obsidian & coral terracotta.
+/// Menghadirkan identitas visual Hitam, Putih, dan Lime Green (aturan 60-30-10).
 class AppTheme {
   AppTheme._();
 
@@ -21,6 +21,7 @@ class AppTheme {
   static const Color surfaceHighlight = AppColors.surfaceHighlight;
   static const Color primary = AppColors.primary;
   static const Color primaryAccent = AppColors.primaryLight;
+  static const Color onPrimary = AppColors.onPrimary;
   static const Color textPrimary = AppColors.textPrimary;
   static const Color textSecondary = AppColors.textSecondary;
   static const Color textMuted = AppColors.textMuted;
@@ -39,15 +40,15 @@ class AppTheme {
       primaryColor: AppColors.primary,
       colorScheme: const ColorScheme.dark(
         primary: AppColors.primary,
-        onPrimary: Colors.white,
+        onPrimary: AppColors.onPrimary,
         primaryContainer: AppColors.primaryContainer,
         secondary: AppColors.secondary,
-        onSecondary: AppColors.bg,
+        onSecondary: AppColors.onSecondary,
         secondaryContainer: AppColors.secondaryContainer,
         surface: AppColors.surface,
         onSurface: AppColors.textPrimary,
         error: AppColors.error,
-        onError: Colors.white,
+        onError: AppColors.textPrimary,
       ),
       textTheme: AppTypography.textTheme,
       cardTheme: CardThemeData(
@@ -99,12 +100,12 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.onPrimary,
           minimumSize: const Size.fromHeight(50),
           shape: RoundedRectangleBorder(
             borderRadius: AppRadius.fullBorderRadius,
           ),
-          textStyle: AppTypography.labelLarge,
+          textStyle: AppTypography.labelLarge.copyWith(color: AppColors.onPrimary),
           elevation: 0,
         ),
       ),
@@ -121,16 +122,19 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.primaryLight,
+          foregroundColor: AppColors.textPrimary,
           textStyle: AppTypography.labelMedium,
         ),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surfaceElevated,
-        selectedColor: AppColors.primary,
+        selectedColor: AppColors.white,
         disabledColor: AppColors.surface,
-        labelStyle: AppTypography.labelMedium,
-        secondaryLabelStyle: AppTypography.labelMedium.copyWith(color: Colors.white),
+        labelStyle: AppTypography.labelMedium.copyWith(color: AppColors.textSecondary),
+        secondaryLabelStyle: AppTypography.labelMedium.copyWith(
+          color: AppColors.onPrimary,
+          fontWeight: FontWeight.bold,
+        ),
         side: const BorderSide(color: AppColors.border, width: 1),
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.fullBorderRadius,
@@ -158,6 +162,43 @@ class AppTheme {
         color: AppColors.border,
         thickness: 1,
         space: 1,
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? AppColors.onPrimary
+              : AppColors.textMuted,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? AppColors.primary
+              : AppColors.surfaceElevated,
+        ),
+        trackOutlineColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? AppColors.primary
+              : AppColors.border,
+        ),
+      ),
+      sliderTheme: SliderThemeData(
+        activeTrackColor: AppColors.primary,
+        inactiveTrackColor: AppColors.border,
+        thumbColor: AppColors.primary,
+        overlayColor: AppColors.primary.withValues(alpha: 0.2),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: AppColors.surfaceElevated,
+        contentTextStyle: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
+        actionTextColor: AppColors.primary,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.mdBorderRadius,
+          side: const BorderSide(color: AppColors.border),
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.primary,
+        circularTrackColor: AppColors.surfaceElevated,
       ),
     );
   }

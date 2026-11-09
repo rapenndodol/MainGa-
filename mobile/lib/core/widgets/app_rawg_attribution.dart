@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 
-/// Atribusi resmi RAWG.io dengan gaya warm obsidian dan tautan aktif.
+/// Atribusi resmi RAWG.io dengan gaya netral dan tautan aktif.
 class AppRawgAttribution extends StatelessWidget {
   final EdgeInsetsGeometry padding;
 
@@ -26,7 +26,7 @@ class AppRawgAttribution extends StatelessWidget {
       padding: padding,
       child: Center(
         child: Material(
-          color: Colors.transparent,
+          color: AppColors.transparent,
           child: InkWell(
             borderRadius: AppRadius.fullBorderRadius,
             onTap: _launchRawg,
@@ -45,22 +45,22 @@ class AppRawgAttribution extends StatelessWidget {
                 children: [
                   Text(
                     'Data by ',
-                    style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted),
+                    style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary),
                   ),
                   Text(
                     'RAWG.io',
                     style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.primaryLight,
+                      color: AppColors.textSecondary,
                       fontWeight: FontWeight.bold,
                       decoration: TextDecoration.underline,
-                      decorationColor: AppColors.primaryLight.withValues(alpha: 0.5),
+                      decorationColor: AppColors.textSecondary.withValues(alpha: 0.65),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   const Icon(
                     Icons.open_in_new_rounded,
                     size: 12,
-                    color: AppColors.primaryLight,
+                    color: AppColors.textSecondary,
                   ),
                 ],
               ),

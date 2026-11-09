@@ -26,7 +26,7 @@ class AppGameCard extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.transparent,
         child: InkWell(
           onTap: onTap ??
               () {

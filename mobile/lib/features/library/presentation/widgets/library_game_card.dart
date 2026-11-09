@@ -24,7 +24,7 @@ class LibraryGameCard extends StatelessWidget {
         border: Border.all(color: AppColors.border, width: 1),
       ),
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.transparent,
         child: InkWell(
           borderRadius: AppRadius.lgBorderRadius,
           onTap: () async {

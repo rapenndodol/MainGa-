@@ -149,13 +149,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: AppColors.surfaceElevated,
-                        border: Border.all(color: AppColors.primary, width: 2),
+                        border: Border.all(color: AppColors.border, width: 2),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         nama.isNotEmpty ? nama[0].toUpperCase() : 'G',
                         style: AppTypography.displayLarge.copyWith(
-                          color: AppColors.primary,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),

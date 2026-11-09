@@ -310,8 +310,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: Text(
                           'Masuk di sini',
                           style: AppTypography.labelMedium.copyWith(
-                            color: AppColors.primaryLight,
+                            color: AppColors.textPrimary,
                             fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
                           ),
                         ),
                       ),

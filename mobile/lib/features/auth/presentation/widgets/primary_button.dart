@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/widgets/app_button.dart';
 
 /// Adapter PrimaryButton yang mendelegasikan ke AppButton terpusat.
-/// Menggantikan gradient ungu lama dengan bentuk Pill solid coral red.
+/// Menggunakan bentuk Pill solid Lime Green dengan teks/ikon hitam kontras tinggi.
 class PrimaryButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;

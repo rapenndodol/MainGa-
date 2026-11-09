@@ -78,7 +78,7 @@ class _SplashScreenState extends State<SplashScreen> {
               child: const Icon(
                 Icons.sports_esports_rounded,
                 size: 44,
-                color: AppColors.primary,
+                color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: AppSpacing.lg),

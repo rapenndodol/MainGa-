@@ -108,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Icon(
                         Icons.sports_esports_rounded,
                         size: 38,
-                        color: AppColors.primary,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ),
@@ -247,8 +247,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Text(
                           'Daftar Sekarang',
                           style: AppTypography.labelMedium.copyWith(
-                            color: AppColors.primaryLight,
+                            color: AppColors.textPrimary,
                             fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
                           ),
                         ),
                       ),

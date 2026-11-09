@@ -491,3 +491,93 @@ flutter run
 4. **Penerapan Gaya Visual Anti-Slop (Skill `design-taste-frontend`)**:
    - Status badge diberi kode warna fungsional yang tenang: Cyan untuk Wishlist, Indigo untuk Backlog, Amber untuk Sedang Dimainkan, Emerald Green untuk Tamat, dan Rose untuk Dropped.
    - Kartu dirancang rata (*flat surfaces*), dibatasi garis 1px (`#2E2A48`), dengan hierarki tipografi kontras dan indikator data jujur (nilai kosong ditampilkan `-` atau indikasi ramah).
+
+
+---
+
+## 🎨 Redesain Warna: Hitam-Putih-Lime (60-30-10)
+
+Aplikasi **MainGa?** telah menerapkan redesain palet warna menyeluruh dengan aturan visual **60-30-10** berlandaskan prinsip *anti-slop* dari panduan desain UI berkelas (`design-taste-frontend`). Redesain ini merupakan perubahan **warna murni** tanpa mengubah struktur layout, ukuran, logika bisnis, endpoint, database, maupun susunan folder.
+
+### 📐 Aturan Distribusi 60-30-10
+- **60% Hitam (`#0B0B0C`)**: Warna dominan untuk latar belakang layar (*scaffold background*), permukaan kartu (*surface*), modal sheet, dialog, dan app bar.
+- **30% Putih (`#FFFFFF`)**: Warna sekunder fungsional untuk teks, ikon, garis batas/divider, tombol sekunder/outline, dan latar chip filter terpilih.
+- **10% Lime Green (`#C6F432`)**: Aksen kontras tinggi terbatas untuk CTA utama (*primary button*), tab navigasi aktif di *floating bottom dock*, indikator fokus input, saklar/slider aktif, badge "Mencapai target", titik penanda aktif, serta aksen utama visualisasi grafik.
+
+---
+
+### 📊 Tabel Token Warna Resmi (`lib/core/theme/app_colors.dart`)
+
+| Kategori | Token | Kode Hex / Nilai | Rasio 60-30-10 | Deskripsi & Peruntukan |
+| :--- | :--- | :--- | :---: | :--- |
+| **Latar & Permukaan** | `bg` | `#0B0B0C` | 60% | Latar belakang utama seluruh layar aplikasi (*scaffold*) |
+| | `surface` | `#141416` | 60% | Permukaan kartu standar (*tone step 1*) |
+| | `surfaceElevated` | `#1C1C1F` | 60% | Permukaan kartu terangkat, modal sheet, floating nav dock |
+| | `surfaceHighlight`| `#26262B` | 60% | Permukaan kontainer sorotan netral |
+| | `inputBackground` | `#141416` | 60% | Latar field input form pencarian dan autentikasi |
+| **Batas & Garis** | `border` | `#2A2A2E` | 30% | Garis batas netral kontur kartu, input, dan divider |
+| | `borderFocused` | `#C6F432` | 10% | Garis batas saat input field aktif / berfokus |
+| **Aksen Primer** | `primary` | `#C6F432` | 10% | Aksen Lime Green: CTA utama, tab aktif, slider/switch aktif |
+| | `primaryContainer`| `#1F280D` | 10% | Kontainer gelap aksen lime dengan tone tenang |
+| | `primaryLight` | `#D4F75A` | 10% | Variasi aksen lime terang |
+| | `onPrimary` | `#0B0B0C` | — | **Teks/ikon di atas Lime SELALU hitam (#0B0B0C)** demi kontras WCAG AA (15.9:1) |
+| **Aksen Sekunder** | `secondary` | `#FFFFFF` | 30% | Putih murni untuk tombol outline, chip aktif, dan garis |
+| | `secondaryContainer`| `#1C1C1F`| 30% | Kontainer sekunder gelap terangkat |
+| | `onSecondary` | `#0B0B0C` | — | Teks/ikon di atas permukaan sekunder putih |
+| **Tipografi** | `textPrimary` | `#FFFFFF` | 30% | Teks utama: kontras tertinggi, putih 100% |
+| | `textSecondary` | `Color(0xA6FFFFFF)` | 30% | Teks sekunder: putih opacity 65% untuk subtitle & metadata |
+| | `textMuted` | `Color(0x61FFFFFF)` | 30% | Teks tersier / keterangan waktu: putih opacity 38% |
+| | `textDisabled` | `Color(0x61FFFFFF)` | 30% | Teks komponen non-aktif: putih opacity 38% |
+| **Netral Universal**| `white` | `#FFFFFF` | 30% | Putih netral |
+| | `black` | `#000000` | 60% | Hitam absolut untuk bayangan (*box-shadow*) |
+| | `transparent` | `#00000000` | — | Warna transparan |
+| **Status Fungsional**| `ratingStar` | `#E5B842` | — | Bintang rating game (emas hangat berdaya saturasi seimbang) |
+| | `error` | `#E05353` | — | Pesan galat, snackbar error, tombol destruktif |
+| | `success` | `#4DA87D` | — | Pesan sukses & tanggal tamat (hijau tenang) |
+| **Status Koleksi** | `statusPlaying` | `#D9736C` | — | Sedang Dimainkan (*muted coral*) |
+| | `statusCompleted` | `#4DA87D` | — | Tamat (*muted forest green*) |
+| | `statusBacklog` | `#D1C7B7` | — | Backlog (*muted stone beige*) |
+| | `statusWishlist` | `#D9A55B` | — | Wishlist (*muted warm amber*) |
+| | `statusDropped` | `#8E8E93` | — | Dropped (*muted slate gray*) |
+| **Grafik fl_chart** | `chartCompletedBar`| `#C6F432` | 10% | Batang game tamat per bulan: lime |
+| | `chartPriceLine` | `#C6F432` | 10% | Garis riwayat harga: lime dengan area gradien ke transparan |
+| | `chartDonutSlice1`| `#C6F432` | 10% | Irisan 1 Donut genre favorit: Lime |
+| | `chartDonutSlice2`| `#FFFFFF` | 30% | Irisan 2 Donut genre favorit: Putih |
+| | `chartDonutSlice3`| `#A1A1A6` | — | Irisan 3 Donut genre favorit: Abu netral 1 |
+| | `chartDonutSlice4`| `#6B6B70` | — | Irisan 4 Donut genre favorit: Abu netral 2 |
+| | `chartDonutSlice5`| `#3A3A3F` | — | Irisan 5 Donut genre favorit: Abu netral 3 |
+
+---
+
+### 💡 Keputusan Desain & Detail Implementasi
+
+1. **Aturan Penggunaan Lime Green (~10% Area Tampilan)**:
+   - Sesuai aturan, warna Lime Green `#C6F432` dibatasi secara ketat hanya pada:
+     - Tombol aksi utama (`AppButton` varian `primary`).
+     - Tab aktif pada dock navigasi melayang (*Floating Bottom Navigation Bar*).
+     - Indikator fokus input formulir (`borderFocused`).
+     - Saklar (*Switch*) dan *Slider* saat posisi aktif.
+     - Titik penanda aktif / belum dibaca (*active filter dot indicator*).
+     - Aksen utama visualisasi grafik.
+   - Tidak pernah digunakan untuk latar layar lebar, teks paragraf panjang, atau kartu konten.
+
+2. **Kontras Teks & Aksesibilitas WCAG AA (Minimal 4.5:1)**:
+   - **Teks/Ikon di atas Lime Green**: Menggunakan `AppColors.onPrimary` (`#0B0B0C`). Kontras yang dihasilkan mencapai **15.9:1** (melebihi standar WCAG AAA 7:1). Teks putih di atas lime dilarang karena hanya menghasilkan kontras 1.2:1 yang tidak terbaca.
+   - **Teks di atas Latar Gelap**: `textPrimary` (`#FFFFFF`) pada `#0B0B0C` memiliki kontras **19.3:1**. `textSecondary` (putih 65%) memiliki kontras **9.2:1**. Seluruhnya lolos uji WCAG AA.
+
+3. **Status Bermain & Pembeda Galat (Desaturasi Fungsional)**:
+   - Status koleksi game (*Wishlist, Backlog, Sedang Dimainkan, Tamat, Dropped*) serta status galat/sukses mempertahankan pembeda fungsionalnya hanya pada `AppStatusChip` dan state galat.
+   - Saturasi warna diturunkan secara presisi (*desaturated earthy tones*) agar tidak bersaing perhatian dengan aksen vibran Lime Green.
+   - Di luar komponen status fungsional ini, aplikasi sepenuhnya netral monokrom (Hitam & Putih).
+
+4. **Desain Chip Filter Terpilih**:
+   - Berdasarkan aturan nomor 5, chip filter yang sedang aktif (*genre filter*, *library status filter*) menggunakan latar Putih (`#FFFFFF`) dengan tipografi hitam `#0B0B0C` (`AppColors.onPrimary`), menghasilkan hierarki visual yang tegas dan tenang tanpa memakai warna aksen berlebihan.
+
+5. **Skeleton Shimmer Shading**:
+   - Komponen pemuatan `AppSkeletonBox` kini bertransisi secara mulus dari `AppColors.surface` (`#141416`) ke `AppColors.surfaceElevated` (`#1C1C1F`) menggunakan `Color.lerp`, menghadirkan animasi pulse netral yang elegan tanpa efek glowing murahan.
+
+6. **Atribusi "Data by RAWG"**:
+   - Menggunakan warna `AppColors.textSecondary` (putih 65%) dengan garis bawah (*underline*), tetap dapat diklik untuk membuka tautan resmi RAWG.io dengan tingkat keterbacaan tinggi.
+
+7. **Zero Hardcoded Colors**:
+   - Seluruh warna *hardcoded* (`Color(0x...)` dan `Colors.*`) di luar `app_colors.dart` telah dibersihkan dan dialihkan ke token tema terpusat.

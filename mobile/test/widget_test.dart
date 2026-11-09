@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/auth/data/models/auth_response_model.dart';
 import 'package:mobile/features/auth/data/models/user_model.dart';
 import 'package:mobile/features/auth/presentation/screens/login_screen.dart';
@@ -459,6 +460,82 @@ void main() {
 
       expect(find.text('4.8'), findsOneWidget);
       expect(find.byIcon(Icons.star_rounded), findsOneWidget);
+    });
+  });
+
+  group('Palette & Theme System Tests (60-30-10)', () {
+    test('AppColors matches required 60-30-10 palette tokens', () {
+      // 60% Hitam Utama & Tone Step Netral
+      expect(AppColors.bg, const Color(0xFF0B0B0C));
+      expect(AppColors.surface, const Color(0xFF141416));
+      expect(AppColors.surfaceElevated, const Color(0xFF1C1C1F));
+      expect(AppColors.border, const Color(0xFF2A2A2E));
+
+      // 30% Putih
+      expect(AppColors.textPrimary, const Color(0xFFFFFFFF));
+      expect(AppColors.secondary, const Color(0xFFFFFFFF));
+      expect(AppColors.textSecondary, const Color(0xA6FFFFFF));
+      expect(AppColors.textDisabled, const Color(0x61FFFFFF));
+
+      // 10% Lime Accent
+      expect(AppColors.primary, const Color(0xFFC6F432));
+      expect(AppColors.borderFocused, const Color(0xFFC6F432));
+      expect(AppColors.onPrimary, const Color(0xFF0B0B0C));
+    });
+
+    test('fl_chart and status tokens are properly defined', () {
+      expect(AppColors.chartCompletedBar, const Color(0xFFC6F432));
+      expect(AppColors.chartPriceLine, const Color(0xFFC6F432));
+      expect(AppColors.chartDonutSlice1, const Color(0xFFC6F432));
+      expect(AppColors.chartDonutSlice2, const Color(0xFFFFFFFF));
+      expect(AppColors.chartDonutSlice3, const Color(0xFFA1A1A6));
+      expect(AppColors.chartDonutSlice4, const Color(0xFF6B6B70));
+      expect(AppColors.chartDonutSlice5, const Color(0xFF3A3A3F));
+
+      // Desaturated status colors
+      expect(AppColors.statusPlaying, isNotNull);
+      expect(AppColors.statusCompleted, isNotNull);
+      expect(AppColors.statusBacklog, isNotNull);
+      expect(AppColors.statusWishlist, isNotNull);
+      expect(AppColors.statusDropped, isNotNull);
+    });
+
+    test('AppTheme.darkTheme aligns with new palette', () {
+      final theme = AppTheme.darkTheme;
+      expect(theme.scaffoldBackgroundColor, AppColors.bg);
+      expect(theme.colorScheme.primary, AppColors.primary);
+      expect(theme.colorScheme.onPrimary, AppColors.onPrimary);
+      expect(theme.colorScheme.surface, AppColors.surface);
+      expect(theme.colorScheme.onSurface, AppColors.textPrimary);
+      expect(theme.cardTheme.color, AppColors.surface);
+      expect(theme.appBarTheme.backgroundColor, AppColors.bg);
+      expect(theme.chipTheme.selectedColor, AppColors.white);
+    });
+
+    testWidgets('AppButton primary has Lime background and Black text/icon for contrast',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        TestWrapper(
+          child: Scaffold(
+            body: AppButton(
+              text: 'Aksi Utama',
+              icon: Icons.check,
+              onPressed: () {},
+              variant: AppButtonVariant.primary,
+            ),
+          ),
+        ),
+      );
+
+      final materialFinder = find.descendant(of: find.byType(AppButton), matching: find.byType(Material));
+      final material = tester.widget<Material>(materialFinder);
+      expect(material.color, AppColors.primary);
+
+      final icon = tester.widget<Icon>(find.byIcon(Icons.check));
+      expect(icon.color, AppColors.onPrimary);
+
+      final text = tester.widget<Text>(find.text('Aksi Utama'));
+      expect(text.style?.color, AppColors.onPrimary);
     });
   });
 }

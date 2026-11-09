@@ -146,8 +146,8 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Colors.black.withValues(alpha: 0.65),
-                          Colors.transparent,
+                          AppColors.black.withValues(alpha: 0.65),
+                          AppColors.transparent,
                           AppColors.bg,
                         ],
                         begin: Alignment.topCenter,
@@ -397,8 +397,9 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                                   ? 'Sembunyikan'
                                   : 'Baca selengkapnya',
                               style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.primaryLight,
+                                color: AppColors.textPrimary,
                                 fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
                               ),
                             ),
                           ),
@@ -447,7 +448,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
         ),
       ),
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.transparent,
         child: InkWell(
           borderRadius: AppRadius.lgBorderRadius,
           onTap: _openLibraryForm,
@@ -492,7 +493,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                   child: const Icon(
                     Icons.edit_outlined,
                     size: 16,
-                    color: AppColors.primaryLight,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ],

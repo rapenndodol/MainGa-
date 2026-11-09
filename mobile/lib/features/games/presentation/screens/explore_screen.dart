@@ -208,7 +208,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         child: Text(
                           'Reset',
                           style: AppTypography.labelMedium.copyWith(
-                            color: AppColors.primaryLight,
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ),
@@ -443,7 +443,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         width: 48,
                         decoration: BoxDecoration(
                           color: hasActiveFilters
-                              ? AppColors.primary.withValues(alpha: 0.16)
+                              ? AppColors.surfaceHighlight
                               : AppColors.surfaceElevated,
                           borderRadius: AppRadius.fullBorderRadius,
                           border: Border.all(
@@ -457,7 +457,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           icon: Icon(
                             Icons.tune_rounded,
                             color: hasActiveFilters
-                                ? AppColors.primaryLight
+                                ? AppColors.textPrimary
                                 : AppColors.textSecondary,
                             size: 20,
                           ),
@@ -509,15 +509,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           _fetchGames(resetPage: true);
                         }
                       },
-                      selectedColor: AppColors.primary,
+                      selectedColor: AppColors.white,
                       backgroundColor: AppColors.surfaceElevated,
                       labelStyle: AppTypography.labelSmall.copyWith(
-                        color: isSelected ? Colors.white : AppColors.textSecondary,
+                        color: isSelected ? AppColors.onPrimary : AppColors.textSecondary,
                         fontWeight:
                             isSelected ? FontWeight.bold : FontWeight.w500,
                       ),
                       side: BorderSide(
-                        color: isSelected ? AppColors.primary : AppColors.border,
+                        color: isSelected ? AppColors.white : AppColors.border,
                         width: 1,
                       ),
                       shape: RoundedRectangleBorder(

@@ -60,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
         border: Border.all(color: AppColors.border, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
+            color: AppColors.black.withValues(alpha: 0.5),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -102,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isSelected = _currentIndex == index;
 
     return Material(
-      color: Colors.transparent,
+      color: AppColors.transparent,
       child: InkWell(
         borderRadius: AppRadius.fullBorderRadius,
         onTap: () {
@@ -117,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
             vertical: AppSpacing.xs + 2,
           ),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary : Colors.transparent,
+            color: isSelected ? AppColors.primary : AppColors.transparent,
             borderRadius: AppRadius.fullBorderRadius,
           ),
           child: Row(
@@ -125,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Icon(
                 icon,
-                color: isSelected ? Colors.white : AppColors.textMuted,
+                color: isSelected ? AppColors.onPrimary : AppColors.textMuted,
                 size: 20,
               ),
               const SizedBox(width: AppSpacing.xs),
@@ -134,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: AppTypography.labelSmall.copyWith(
                   fontSize: 11,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? Colors.white : AppColors.textMuted,
+                  color: isSelected ? AppColors.onPrimary : AppColors.textMuted,
                 ),
               ),
             ],

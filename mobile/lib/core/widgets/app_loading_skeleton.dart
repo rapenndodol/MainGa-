@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-/// Skeleton box tunggal dengan animasi pulse halus.
+/// Skeleton box tunggal dengan animasi pulse tone surface -> surfaceElevated.
 class AppSkeletonBox extends StatefulWidget {
   final double? width;
   final double height;
@@ -31,7 +31,7 @@ class _AppSkeletonBoxState extends State<AppSkeletonBox>
       duration: const Duration(milliseconds: 1100),
     )..repeat(reverse: true);
 
-    _animation = Tween<double>(begin: 0.35, end: 0.75).animate(
+    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
   }
@@ -51,9 +51,13 @@ class _AppSkeletonBoxState extends State<AppSkeletonBox>
           width: widget.width,
           height: widget.height,
           decoration: BoxDecoration(
-            color: AppColors.surfaceElevated.withValues(alpha: _animation.value),
+            color: Color.lerp(
+              AppColors.surface,
+              AppColors.surfaceElevated,
+              _animation.value,
+            ),
             borderRadius: widget.borderRadius ?? AppRadius.smBorderRadius,
-            border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+            border: Border.all(color: AppColors.border.withValues(alpha: 0.4)),
           ),
         );
       },

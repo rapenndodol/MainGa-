@@ -48,14 +48,14 @@ class AppBadge extends StatelessWidget {
           borderColor = AppColors.border;
           break;
         case AppBadgeVariant.primary:
-          textColor = AppColors.primary;
-          bgColor = AppColors.primary.withValues(alpha: 0.16);
-          borderColor = AppColors.primary.withValues(alpha: 0.4);
+          textColor = AppColors.onPrimary;
+          bgColor = AppColors.primary;
+          borderColor = AppColors.primary;
           break;
         case AppBadgeVariant.secondary:
-          textColor = AppColors.secondary;
-          bgColor = AppColors.secondary.withValues(alpha: 0.15);
-          borderColor = AppColors.secondary.withValues(alpha: 0.35);
+          textColor = AppColors.textPrimary;
+          bgColor = AppColors.surfaceElevated;
+          borderColor = AppColors.border;
           break;
         case AppBadgeVariant.warning:
           textColor = AppColors.ratingStar;

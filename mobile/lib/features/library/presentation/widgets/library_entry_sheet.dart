@@ -25,7 +25,7 @@ class LibraryEntrySheet extends StatefulWidget {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (ctx) => LibraryEntrySheet(
         game: game,
         entry: entry,
@@ -324,7 +324,7 @@ class _LibraryEntrySheetState extends State<LibraryEntrySheet> {
                           Text(
                             isEditing ? 'Kelola di Library' : 'Tambah ke Library',
                             style: AppTypography.labelSmall.copyWith(
-                              color: AppColors.primaryLight,
+                              color: AppColors.textPrimary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

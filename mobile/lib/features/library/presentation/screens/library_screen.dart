@@ -3,7 +3,6 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_error_state.dart';
 import '../../../../core/widgets/app_loading_skeleton.dart';
-import '../../../../core/widgets/app_status_chip.dart';
 import '../../data/datasources/library_remote_data_source.dart';
 import '../../data/models/library_entry_model.dart';
 import '../controllers/library_notifier.dart';
@@ -172,7 +171,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     '$_total game',
                     style: AppTypography.labelSmall.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primaryLight,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ),
@@ -213,24 +212,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
         itemBuilder: (context, index) {
           final option = _filterOptions[index];
           final bool isSelected = _selectedStatus == option;
-          final Color badgeColor = option == 'Semua'
-              ? AppColors.primary
-              : AppStatusHelper.getStatusColor(option);
 
           return ChoiceChip(
             label: Text(
               option,
               style: AppTypography.labelSmall.copyWith(
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? Colors.white : AppColors.textSecondary,
+                color: isSelected ? AppColors.onPrimary : AppColors.textSecondary,
               ),
             ),
             selected: isSelected,
             onSelected: (_) => _onStatusFilterSelected(option),
-            selectedColor: badgeColor,
+            selectedColor: AppColors.white,
             backgroundColor: AppColors.surfaceElevated,
             side: BorderSide(
-              color: isSelected ? badgeColor : AppColors.border,
+              color: isSelected ? AppColors.white : AppColors.border,
               width: 1,
             ),
             shape: RoundedRectangleBorder(
