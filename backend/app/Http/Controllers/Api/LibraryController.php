@@ -14,6 +14,7 @@ use App\Services\RawgService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 class LibraryController extends Controller
@@ -204,6 +205,8 @@ class LibraryController extends Controller
 
         $entry->load(['game.genres', 'game.platforms']);
 
+        Cache::forget('user_recommendations_' . $user->id);
+
         return response()->json([
             'success' => true,
             'message' => 'Game berhasil ditambahkan ke library',
@@ -263,6 +266,8 @@ class LibraryController extends Controller
 
         $entry->save();
 
+        Cache::forget('user_recommendations_' . $entry->user_id);
+
         return response()->json([
             'success' => true,
             'message' => 'Entry library berhasil diperbarui',
@@ -294,10 +299,42 @@ class LibraryController extends Controller
 
         $entry->delete();
 
+        Cache::forget('user_recommendations_' . $entry->user_id);
+
         return response()->json([
             'success' => true,
             'message' => 'Game berhasil dihapus dari library',
             'data'    => null,
+        ], 200);
+    }
+
+    /**
+     * GET /api/library/random
+     * Mengembalikan satu entry library acak milik pengguna dengan status Backlog beserta data game-nya.
+     * Bila backlog kosong, mengembalikan respons HTTP 404 dengan pesan JSON yang jelas.
+     */
+    public function random(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $entry = LibraryEntry::with(['game.genres', 'game.platforms'])
+            ->where('user_id', $user->id)
+            ->where('status', 'Backlog')
+            ->inRandomOrder()
+            ->first();
+
+        if (! $entry) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Backlog kosong. Tambahkan game dengan status Backlog terlebih dahulu.',
+                'data'    => null,
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Game acak dari backlog berhasil dipilih',
+            'data'    => new LibraryEntryResource($entry),
         ], 200);
     }
 }

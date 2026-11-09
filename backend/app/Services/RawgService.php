@@ -63,6 +63,10 @@ class RawgService
             $queryParams['platforms'] = $params['platforms'];
         }
 
+        if (!empty($params['ordering'])) {
+            $queryParams['ordering'] = $params['ordering'];
+        }
+
         return $this->request('/games', $queryParams);
     }
 

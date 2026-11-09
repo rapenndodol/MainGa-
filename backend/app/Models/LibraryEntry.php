@@ -31,6 +31,17 @@ class LibraryEntry extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::saved(function (LibraryEntry $entry) {
+            \Illuminate\Support\Facades\Cache::forget('user_recommendations_' . $entry->user_id);
+        });
+
+        static::deleted(function (LibraryEntry $entry) {
+            \Illuminate\Support\Facades\Cache::forget('user_recommendations_' . $entry->user_id);
+        });
+    }
+
     /**
      * Relasi belongsTo User
      */

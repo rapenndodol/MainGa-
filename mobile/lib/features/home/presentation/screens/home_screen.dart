@@ -3,6 +3,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../auth/data/models/user_model.dart';
 import '../../../games/presentation/screens/explore_screen.dart';
 import '../../../library/presentation/screens/library_screen.dart';
+import '../../../notifications/presentation/controllers/notification_notifier.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
 import '../../../wishlist/presentation/screens/wishlist_screen.dart';
 
@@ -28,6 +29,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    // Muat badge notifikasi saat aplikasi pertama dibuka
+    NotificationNotifier.instance.fetchUnreadCount();
   }
 
   @override
@@ -109,6 +112,10 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _currentIndex = index;
           });
+          // Saat tab Profil ditampilkan, sinkronkan badge notifikasi
+          if (index == 3) {
+            NotificationNotifier.instance.fetchUnreadCount();
+          }
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),

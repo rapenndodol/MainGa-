@@ -7,6 +7,7 @@ import '../../data/datasources/library_remote_data_source.dart';
 import '../../data/models/library_entry_model.dart';
 import '../controllers/library_notifier.dart';
 import '../widgets/library_game_card.dart';
+import '../widgets/random_game_sheet.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -153,6 +154,53 @@ class _LibraryScreenState extends State<LibraryScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         actions: [
+          // ── Tombol "Acak" yang Jelas Terlihat (US-08) ─────────────
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.sm),
+            child: Center(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: AppRadius.fullBorderRadius,
+                  onTap: () => RandomGameSheet.show(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.xs + 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryContainer,
+                      borderRadius: AppRadius.fullBorderRadius,
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.6),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.casino_rounded,
+                          color: AppColors.primaryLight,
+                          size: 16,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(
+                          'Acak',
+                          style: AppTypography.labelSmall.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Badge Total Game
           if (!_isLoading && _total > 0)
             Padding(
               padding: const EdgeInsets.only(right: AppSpacing.lg),
@@ -241,7 +289,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _buildBody() {
-    // Loading skeleton daripada spinner polos
     if (_isLoading) {
       return const AppListSkeleton(itemCount: 5);
     }

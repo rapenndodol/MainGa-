@@ -151,4 +151,48 @@ class GameRemoteDataSource {
       return [];
     }
   }
+
+  /// Ambil rekomendasi game berdasarkan genre library pengguna (F-11)
+  Future<List<GameModel>> getRecommendations() async {
+    final uri = Uri.parse(ApiConstants.recommendationsEndpoint);
+
+    try {
+      final headers = await _getHeaders();
+      final response = await client.get(uri, headers: headers).timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> body = jsonDecode(response.body) as Map<String, dynamic>;
+        if (body['data'] is List) {
+          return (body['data'] as List)
+              .map((item) => GameModel.fromJson(item as Map<String, dynamic>))
+              .toList();
+        }
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Ambil game serupa berdasarkan kesamaan genre (F-11)
+  Future<List<GameModel>> getSimilarGames(int id) async {
+    final uri = Uri.parse(ApiConstants.gameSimilarEndpoint(id));
+
+    try {
+      final headers = await _getHeaders();
+      final response = await client.get(uri, headers: headers).timeout(_timeout);
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> body = jsonDecode(response.body) as Map<String, dynamic>;
+        if (body['data'] is List) {
+          return (body['data'] as List)
+              .map((item) => GameModel.fromJson(item as Map<String, dynamic>))
+              .toList();
+        }
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
 }

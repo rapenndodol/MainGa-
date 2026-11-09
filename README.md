@@ -495,6 +495,393 @@ flutter run
 
 ---
 
+## 📌 Deskripsi Tahap 4 (Wishlist & Pelacak Harga — US-04, US-05, FR-07, FR-08, FR-09)
+
+Tahap 4 mengimplementasikan backend untuk Wishlist pribadi dengan harga target dan Pelacak Harga multi-toko berbasis CheapShark API sesuai [PRD](rules/PRD_MainGA.md) dan aturan [rules_mainga.md](rules/rules_mainga.md):
+
+- **CheapShark API Integration (`PriceService`)**:
+  - Service terisolasi `App\Services\PriceService` tanpa API key (publik) dengan konfigurasi base URL dan timeout dari `config/services.php`.
+  - Normalisasi huruf besar-kecil dan tanda baca untuk pencocokan judul game paling relevan dari hasil pencarian CheapShark.
+  - Penyimpanan ID game CheapShark pada kolom `cheapshark_id` di tabel `games` (migration baru `2026_10_30_000001_add_cheapshark_id_to_games_table.php`) agar pencarian ulang tidak perlu dilakukan pada pengecekan berikutnya.
+  - Pengambilan nama toko dari endpoint `/stores` dengan caching Laravel selama 24 jam dan fallback data toko populer.
+  - Penanganan galat aman (*graceful degradation*): jika game tidak ditemukan atau API CheapShark down/timeout, aplikasi menandai status harga belum tersedia tanpa menimbulkan error 500.
+
+- **Pencatatan Riwayat Harga (`price_history`)**:
+  - Setiap pengecekan menyimpan satu baris per toko ke tabel `price_history` (`game_id`, `toko`, `harga`, `diskon_persen`, `dicek_pada`).
+  - Pencegahan duplikasi data: sistem tidak menyimpan baris baru bila harga dan toko sama dengan pengecekan sebelumnya dalam jam yang sama.
+
+- **Konversi Kurs Mata Uang**:
+  - Harga dasar dan harga target disimpan dalam mata uang USD.
+  - Nilai estimasi Rupiah dihitung menggunakan kurs tetap dari `config/services.php` (dibaca dari environment variable `USD_TO_IDR_RATE` dengan default 16.000).
+  - Diberi penamaan field yang jelas sebagai estimasi (`harga_target_idr_estimasi`, `harga_terendah_idr_estimasi`, `selisih_harga_target_idr_estimasi`, `kurs_usd_ke_idr_estimasi`).
+
+- **Endpoint REST API Terproteksi Sanctum (`auth:sanctum`)**:
+  - `GET /api/wishlist` : Mengambil daftar wishlist milik pengguna yang sedang login, mencakup data game, `harga_target`, `aktif`, `harga_terendah` beserta tokonya (`toko_termurah`), dan `selisih_harga_target` terhadap harga target (`null` bila harga belum tersedia).
+  - `POST /api/wishlist` : Menambahkan game ke wishlist (`game_id` atau `rawg_id`) dengan `harga_target` dalam USD. Langsung menjalankan satu kali pengecekan harga untuk game tersebut.
+  - `GET /api/wishlist/{id}` : Mengambil detail satu entri wishlist pengguna.
+  - `PUT /api/wishlist/{id}` : Mengubah `harga_target` atau status `aktif`.
+  - `DELETE /api/wishlist/{id}` : Menghapus game dari wishlist pengguna.
+  - `GET /api/games/{id}/prices` : Mengambil harga terkini per toko dan riwayat harga lengkap dalam urutan waktu kronologis (untuk visualisasi grafik garis).
+  - `GET /api/games/{id}` : Endpoint detail game yang sudah ada diperluas dengan field `in_wishlist`, `wishlist_status`, `wishlist_alert`, serta daftar harga terkini per toko (`harga_terkini`) dan harga terendah.
+
+- **Aturan Bisnis & Integritas Data**:
+  - `harga_target > 0` (validasi ditolak dengan HTTP 422 bila <= 0 atau non-numerik).
+  - Satu game hanya dapat muncul sekali per pengguna di wishlist (HTTP 422 bila duplikat).
+  - Isolasi kepemilikan: pengguna hanya dapat mengakses, mengubah, dan menghapus wishlist miliknya sendiri (HTTP 403 bila mencoba mengakses data pengguna lain).
+  - Akses tanpa token mengembalikan HTTP 401.
+
+- **Command Artisan & Task Scheduler**:
+  - Command Artisan: `php artisan prices:check` mengecek harga hanya untuk game dengan wishlist aktif (`aktif = true`), tanpa menduplikasi pemanggilan bila banyak pengguna memantau game yang sama.
+  - Opsi manual: `php artisan prices:check --game={id}` untuk memicu pengecekan satu game secara spesifik (berdasarkan ID lokal atau RAWG ID).
+  - Terdaftar pada Laravel Task Scheduler dengan interval 6 jam (`Schedule::command('prices:check')->everySixHours()`).
+
+---
+
+## ⚙️ Cara Menjalankan Pengecekan Harga & Scheduler
+
+### 1. Pengecekan Harga Manual (Artisan Command)
+Untuk mengecek seluruh game yang ada di wishlist aktif pengguna:
+```bash
+cd backend
+php artisan prices:check
+```
+
+Untuk mengecek satu game secara manual berdasarkan ID lokal atau RAWG ID:
+```bash
+cd backend
+php artisan prices:check --game=1
+```
+
+### 2. Menjalankan Task Scheduler (Laravel Scheduler Worker)
+Untuk menjalankan worker scheduler secara lokal/demo sehingga tugas terjadwal (interval 6 jam) berjalan secara otomatis:
+```bash
+cd backend
+php artisan schedule:work
+```
+
+Untuk melihat daftar jadwal perintah yang terdaftar:
+```bash
+cd backend
+php artisan schedule:list
+```
+
+---
+
+## 🧪 Hasil Pengujian Otomatis Tahap 4
+
+### Feature Tests Backend Tambahan:
+Dijalankan dengan: `php artisan test`
+
+1. **WishlistTest** (`tests/Feature/WishlistTest.php` — 10 tests):
+   - ✅ Akses tanpa token mengembalikan status 401.
+   - ✅ Tambah game ke wishlist dengan `game_id` dan memicu pengecekan harga.
+   - ✅ Tambah game ke wishlist dengan `rawg_id` (auto-fetch RAWG).
+   - ✅ Validasi harga target harus lebih besar dari 0 (422 untuk nilai 0, negatif, atau string).
+   - ✅ Penolakan game duplikat di wishlist untuk user yang sama (422).
+   - ✅ Proteksi akses dan modifikasi wishlist pengguna lain (403).
+   - ✅ Pembaruan harga target dan status aktif wishlist (PUT).
+   - ✅ Penghapusan game dari wishlist (DELETE).
+   - ✅ Endpoint `GET /api/wishlist` mengembalikan harga terendah, toko, dan selisih terhadap target.
+   - ✅ Endpoint detail game memuat status wishlist pengguna dan harga terkini per toko.
+
+2. **PriceTrackerTest** (`tests/Feature/PriceTrackerTest.php` — 10 tests):
+   - ✅ Pencocokan judul menormalisasi huruf besar-kecil dan tanda baca serta menyimpan `cheapshark_id`.
+   - ✅ Pengecekan berikutnya langsung memakai `cheapshark_id` tanpa query pencarian ulang.
+   - ✅ Game tidak ditemukan di CheapShark ditandai harga belum tersedia tanpa galat.
+   - ✅ Galat CheapShark (500/timeout) ditangani secara aman tanpa membuat aplikasi galat.
+   - ✅ Pengecekan harga menyimpan baris per toko ke `price_history`.
+   - ✅ Pencegahan duplikasi baris di `price_history` bila toko dan harga sama dalam jam yang sama.
+   - ✅ Perubahan harga dalam jam yang sama tetap dicatat sebagai baris baru.
+   - ✅ Endpoint `GET /api/games/{id}/prices` mengembalikan harga terkini dan riwayat waktu kronologis.
+   - ✅ Endpoint `GET /api/games/{id}/prices` tanpa token mengembalikan status 401.
+   - ✅ Artisan command `prices:check` hanya memproses wishlist aktif dan menduplikasi query game.
+   - ✅ Artisan command `prices:check --game={id}` mengecek 1 game secara manual.
+
+**Total Pengujian Backend**: **49 passed, 248 assertions, 0 failed**.
+
+
+---
+
+## 🎯 Implementasi Mobile: Wishlist & Pelacak Harga (US-04 & US-05)
+
+Fitur Wishlist dengan Harga Target dan Pelacak Harga multi-toko kini telah diimplementasikan secara penuh pada aplikasi Flutter sesuai PRD dan aturan `rules_mainga.md`:
+
+### 1. Tab Wishlist (US-04)
+- **Kartu Wishlist Interaktif (`WishlistGameCard`)**:
+  - Menampilkan thumbnail cover game, judul game, harga target (USD) beserta estimasi Rupiah (`estimasi Rp...`).
+  - Menampilkan harga terendah terkini beserta nama toko (`Steam`, `Epic Games Store`, dll.) dan badge persentase diskon.
+  - Untuk game tanpa data harga CheapShark, ditampilkan label `"Harga belum tersedia"`.
+  - Penanda visual status target:
+    - Bila harga telah mencapai atau di bawah harga target (`harga_terendah <= harga_target`): badge hijau sukses (`✓ Mencapai target!`) beserta nominal penghematan.
+    - Bila harga masih di atas target: indikator selisih harga (`+$X.XX dari target`).
+  - Saklar (*Switch*) toggle aktif/nonaktif pantauan secara langsung dari kartu tanpa perlu membuka form.
+  - Geser (*Swipe Dismissible*) atau tombol ikon hapus dengan dialog konfirmasi modal sebelum game dihapus dari database.
+  - Ketuk kartu membuka layar detail game (`GameDetailScreen`).
+- **Penanganan Status Tampilan**:
+  - *Loading State*: Skeleton shimmer loading yang halus.
+  - *Empty State*: Menampilkan `"Belum ada game di wishlist"` lengkap dengan ikon dan deskripsi informatif serta ajakan mencari game di tab Jelajah.
+  - *Error State*: Tampilan galat rapi dengan tombol *"Coba Lagi"*.
+  - *Pull-to-refresh*: `RefreshIndicator` untuk menyegarkan data seketika.
+  - *Filter Cepat*: Chip filter horizontal (Semua / Pantauan Aktif / Nonaktif) serta pagination *infinite scroll*.
+
+### 2. Layar Detail Game: Wishlist Action & Form (US-04)
+- **Tombol Aksi Berdampingan Sempurna**:
+  - Tombol aksi Library dan Wishlist diletakkan berdampingan (*side-by-side*) secara proporsional di bawah header game tanpa merusak tata letak.
+  - Bila game belum ada di wishlist: menampilkan tombol *"Tambah ke Wishlist"*.
+  - Bila game sudah ada di wishlist: menampilkan kartu interaktif berisi target harga aktif dengan ikon edit untuk mengubah atau menghapus.
+- **Modal Bottom Sheet Wishlist (`WishlistFormSheet`)**:
+  - Input harga target dalam USD dengan validasi wajib > 0 (HTTP 422 dicegah sejak sisi klien).
+  - Label mata uang `"USD"` yang jelas.
+  - Perhitungan dinamis nilai estimasi Rupiah secara realtime saat pengguna mengetik, berlabel jelas `"estimasi"` (menggunakan kurs acuan `Rp 16.000 / USD`).
+  - Saklar pantauan aktif.
+  - Opsi hapus dari wishlist dengan konfirmasi modal saat mode ubah.
+
+### 3. Layar Detail Game: Bagian "Harga" & Grafik Riwayat (US-05)
+- **Bagian Harga Multi-Toko (`PriceTrackerSection`)**:
+  - Daftar penawaran harga per toko (nama toko, harga dalam USD, estimasi Rupiah, persentase diskon, dan waktu pengecekan terakhir), diurutkan dari harga termurah.
+  - Badge khusus `"Termurah di [Nama Toko]"` untuk penawaran terbaik.
+- **Grafik Garis Riwayat Harga (`LineChart` dari paket `fl_chart`)**:
+  - Mengambil data dari endpoint `/api/games/{id}/prices`.
+  - Visualisasi garis halus (*curved line*) beraksen warna tema obsidian & coral terracotta dengan area gradien lembut.
+  - Tooltip interaktif saat disentuh yang menampilkan nama toko, tanggal, dan nominal harga.
+  - Penanganan batas riwayat:
+    - Bila riwayat kosong: menampilkan keterangan `"Harga belum tersedia"`.
+    - Bila hanya ada 1 titik data: menampilkan titik harga tunggal disertai keterangan `"Riwayat belum cukup untuk grafik"` tanpa galat.
+
+### 4. Sinkronisasi Reaktif Lintas Layar
+- Menggunakan singleton `WishlistNotifier` (`ChangeNotifier`) yang terintegrasi di `WishlistScreen` dan `GameDetailScreen`.
+- Setiap penambahan, pembaruan, pengubahan toggle aktif, atau penghapusan game dari wishlist akan langsung memperbarui tab Wishlist dan layar detail secara reaktif tanpa perlu memuat ulang (*restart*) aplikasi.
+
+---
+
+## 🎲 Data Simulasi Riwayat Harga (Demo Lokal)
+
+Tersedia seeder khusus pengembangan lokal untuk mengisi tabel `price_history` dengan titik-titik harga simulasi selama 4 minggu ke belakang pada beberapa toko (Steam, Epic Games Store, GOG) dengan fluktuasi harga wajar, termasuk titik penawaran diskon yang berada di bawah harga target:
+
+```bash
+cd backend
+php artisan db:seed --class=PriceHistoryDemoSeeder
+```
+
+> ⚠️ **Catatan Penting**: Seeder `PriceHistoryDemoSeeder` ini **HANYA UNTUK DEMO & PENGEMBANGAN LOKAL**. Seeder ini sengaja tidak dijalankan secara otomatis oleh `DatabaseSeeder` agar tidak memengaruhi data produksi atau pengujian otomatis.
+
+---
+
+## 🧪 Hasil Pengujian & Analisis (Mobile & Backend)
+
+1. **Flutter Analyzer**:
+   - Perintah: `cd mobile; flutter analyze`
+   - Hasil: **No issues found!** (0 error, 0 warning, 0 hint).
+
+2. **Flutter Widget & Unit Tests**:
+   - Perintah: `cd mobile; flutter test`
+   - Hasil: **All 25 tests passed!**
+   - Mencakup pengujian serialisasi `WishlistItemModel`, `WishlistResponseModel`, `GamePricesResponseModel`, widget `WishlistGameCard`, empty state `WishlistScreen`, serta seluruh widget testing yang sudah ada sebelumnya.
+
+3. **Backend Feature Tests**:
+   - Perintah: `cd backend; php artisan test --without-tty`
+   - Hasil: **51 passed, 263 assertions, 0 failed**.
+
+---
+
+## 🔔 Tahap 5: Backend Notifikasi, Statistik Bermain, dan Game Acak (US-06, US-07, US-08)
+
+Tahap 5 mengimplementasikan backend lengkap untuk notifikasi penurunan harga real-time, statistik kebiasaan bermain teragregasi, pemilihan game acak dari backlog, serta artisan command simulator harga sesuai [PRD](rules/PRD_MainGA.md) dan aturan [rules_mainga.md](rules/rules_mainga.md):
+
+### 1. Notifikasi Penurunan Harga (US-06, FR-10, FR-11)
+- **Alur Pemicu Otomatis**:
+  - Dijalankan pada command scheduler `prices:check` dan saat penambahan wishlist pertama kali via `POST /api/wishlist`.
+  - Membandingkan harga terendah game dengan `harga_target` seluruh entri `wishlist_alerts` aktif (`aktif = true`) milik semua pengguna yang memantau game tersebut.
+  - Jika `harga_terendah <= harga_target`, notifikasi baru dibuat di tabel `notifications` berisi `game_id`, `judul` (nama game), `pesan` informatif, `harga`, dan nama `toko` termurah.
+- **Pencegahan Duplikasi & Deteksi Perubahan Harga**:
+  - Sistem tidak membuat notifikasi baru bila harga terendah belum berubah dari harga pada notifikasi terakhir untuk user dan game tersebut.
+  - Bila harga berubah (turun lebih jauh, atau naik lalu turun kembali ke bawah/sama dengan target), notifikasi baru diterbitkan secara otomatis.
+  - Wishlist nonaktif tidak memicu notifikasi.
+  - Setiap pengguna yang memantau game yang sama dievaluasi dan menerima notifikasi masing-masing.
+- **Endpoints Terproteksi Sanctum (`auth:sanctum`)**:
+  - `GET /api/notifications` : Mengambil daftar notifikasi milik pengguna yang login (diurutkan kronologis terbaru, pagination, memuat judul game, toko, harga, waktu pembuatan, dan status dibaca).
+  - `GET /api/notifications/unread-count` : Menghitung jumlah notifikasi yang belum dibaca (`dibaca_pada` null).
+  - `PUT /api/notifications/{id}/read` : Menandai notifikasi sebagai dibaca (`dibaca_pada` terisi waktu sekarang). Mengembalikan status HTTP 403 bila notifikasi milik pengguna lain, atau 404 jika tidak ditemukan.
+  - `PUT /api/notifications/read-all` : Menandai seluruh notifikasi belum dibaca milik pengguna yang login sebagai sudah dibaca secara massal.
+
+### 2. Statistik Bermain (US-07, FR-12)
+- **Agregasi Query Efisien**:
+  - Dihitung langsung menggunakan agregasi SQL basis data (`COUNT`, `SUM`, `GROUP BY`) tanpa memuat seluruh koleksi ke memori aplikasi.
+- **Endpoint Terproteksi Sanctum (`auth:sanctum`)**:
+  - `GET /api/stats` : Mengembalikan metrik statistik bermain milik pengguna yang login:
+    - `total_game` : Total game yang ada di library pengguna.
+    - `total_jam` : Akumulasi jam bermain (`jam_main`) dari library pengguna.
+    - `jumlah_tamat` : Total game berstatus `Tamat`.
+    - `game_tamat_per_bulan` : Agregasi jumlah game tamat selama 12 bulan terakhir berdasarkan `tanggal_tamat`. Bulan tanpa data tetap dikembalikan dengan nilai `0`, diurutkan kronologis dari terlama ke terbaru dengan label bulan yang mudah dibaca (misal `"Nov 2026"`).
+    - `genre_favorit` : Maksimal 5 genre teratas dari game yang dimiliki pengguna di library (dihitung lewat pivot `game_genre` dan master `genres`), berisi nama genre dan jumlah frekuensinya.
+    - Pengguna baru tanpa data library otomatis mendapatkan nilai 0 dan daftar kosong tanpa galat (HTTP 200).
+
+### 3. Game Acak dari Backlog (US-08, FR-15)
+- **Endpoint Terproteksi Sanctum (`auth:sanctum`)**:
+  - `GET /api/library/random` : Mengembalikan satu entri library acak milik pengguna yang berstatus `Backlog` beserta relasi data game-nya (`LibraryEntryResource`).
+  - **Penanganan Backlog Kosong**: Bila pengguna tidak memiliki game berstatus Backlog, endpoint mengembalikan respons HTTP `404 Not Found` dengan payload JSON yang jelas (`"success": false`, `"message": "Backlog kosong. Tambahkan game dengan status Backlog terlebih dahulu."`, `"data": null`).
+  - **Pencegahan Tabrakan Rute**: Rute ini didaftarkan sebelum rute `/library/{id}` pada `routes/api.php` agar tidak tertukar dengan parameter ID.
+  - Pembaruan status game terpilih ke `Sedang Dimainkan` dapat langsung dilakukan menggunakan endpoint yang sudah tersedia: `PUT /api/library/{id}` dengan body `{"status": "Sedang Dimainkan"}`.
+
+### 4. Perintah Simulasi Harga untuk Demo & Pengujian Lokal
+Untuk kebutuhan pengujian lokal dan demonstrasi tanpa harus menunggu penjadwalan scheduler atau ketergantungan koneksi CheapShark, disediakan command artisan:
+```bash
+cd backend
+php artisan prices:simulate {game_id} {harga}
+```
+- **Contoh**:
+  ```bash
+  cd backend
+  php artisan prices:simulate 1 19.99
+  ```
+- **Mekanisme**:
+  - Menyimpan satu baris riwayat harga di tabel `price_history` dengan toko `"Simulasi"` dan nominal harga sesuai argumen.
+  - Menjalankan logika pembuatan notifikasi penurunan harga secara otomatis sebagaimana alur pengecekan harga sungguhan.
+  - **Proteksi Lingkungan**: Command ini menolak dijalankan di lingkungan `production` dan hanya diizinkan di lingkungan non-production (`local` / `testing`).
+
+---
+
+## 🧪 Hasil Pengujian Otomatis Tahap 5
+
+Pengujian backend otomatis dijalankan dengan:
+```bash
+cd backend
+php artisan test --without-tty
+```
+
+Hasil pengujian: **75 passed, 418 assertions, 0 failed** (100% lulus dalam ~2 detik).
+
+Mencakup 24 pengujian baru:
+1. `tests/Feature/NotificationTest.php` (13 tests):
+   - ✅ Notifikasi dibuat tepat saat harga terendah <= harga target.
+   - ✅ Notifikasi tidak dibuat saat harga terendah masih di atas target.
+   - ✅ Pencegahan duplikasi: tidak membuat notifikasi baru untuk harga yang sama.
+   - ✅ Notifikasi dibuat kembali saat harga berubah (turun lebih jauh, atau naik lalu turun lagi).
+   - ✅ Wishlist nonaktif (`aktif = false`) tidak menghasilkan notifikasi.
+   - ✅ Beberapa pengguna yang memantau game yang sama menerima notifikasi masing-masing sesuai targetnya.
+   - ✅ Pengecekan awal saat `POST /api/wishlist` langsung memicu notifikasi jika harga memenuhi target.
+   - ✅ Endpoint `GET /api/notifications` mengembalikan daftar terurut terbaru dengan pagination dan data lengkap.
+   - ✅ Endpoint `GET /api/notifications/unread-count` menghitung jumlah belum dibaca secara akurat.
+   - ✅ Endpoint `PUT /api/notifications/{id}/read` menandai notifikasi dibaca dan mengisi `dibaca_pada`.
+   - ✅ Endpoint `PUT /api/notifications/read-all` menandai seluruh notifikasi user sebagai dibaca.
+   - ✅ Proteksi notifikasi: notifikasi pengguna lain mengembalikan status HTTP 403.
+   - ✅ Seluruh endpoint notifikasi mengembalikan 401 jika diakses tanpa token autentikasi.
+
+2. `tests/Feature/StatsTest.php` (4 tests):
+   - ✅ Pengguna tanpa data library mengembalikan nilai 0, 12 bulan bernilai 0, dan array genre kosong tanpa galat (200 OK).
+   - ✅ Statistik dihitung akurat untuk library campuran (total game, total jam, jumlah tamat, 12 bulan terakhir kronologis, top 5 genre favorit).
+   - ✅ Agregasi statistik hanya menghitung data milik pengguna yang login (terisolasi dari pengguna lain).
+   - ✅ Akses endpoint statistik tanpa token mengembalikan status 401.
+
+3. `tests/Feature/RandomGameTest.php` (4 tests):
+   - ✅ Game acak memilih HANYA dari game berstatus Backlog milik pengguna.
+   - ✅ Bila backlog kosong, mengembalikan respons HTTP 404 dengan pesan JSON yang jelas.
+   - ✅ Game acak hanya memilih dari data library milik pengguna sendiri.
+   - ✅ Akses endpoint random tanpa token mengembalikan status 401.
+
+4. `tests/Feature/PriceSimulateCommandTest.php` (3 tests):
+   - ✅ Command `prices:simulate` menolak berjalan di lingkungan production.
+   - ✅ Command mencatat riwayat harga simulasi dan memicu alur pembuatan notifikasi penurunan harga.
+   - ✅ Validasi masukan: penolakan bila game tidak ditemukan, harga bukan angka, atau harga bernilai negatif.
+
+
+---
+
+## 📱 Implementasi Mobile: Notifikasi, Statistik, dan Fitur Acak (US-06, US-07, US-08)
+
+Fitur Notifikasi in-app penurunan harga, Statistik bermain interaktif berbasis grafik `fl_chart`, serta fitur Acak game dari backlog telah selesai diimplementasikan pada aplikasi Flutter sesuai spesifikasi [PRD](rules/PRD_MainGA.md) dan aturan [rules_mainga.md](rules/rules_mainga.md):
+
+### 1. Notifikasi In-App (US-06)
+- **Ikon Lonceng & Badge Dinamis**:
+  - Disematkan pada AppBar di Tab Profil dengan badge jumlah notifikasi yang belum dibaca (`unread_count`).
+  - Badge tersembunyi secara otomatis bila jumlah belum dibaca bernilai 0.
+  - Nilai badge disinkronkan secara efisien dari endpoint `/api/notifications/unread-count` saat aplikasi dibuka, saat pengguna membuka tab Profil, dan saat pengguna melakukan *pull-to-refresh* (tanpa polling terus-menerus).
+- **Layar Notifikasi (`NotificationScreen`)**:
+  - Menampilkan daftar notifikasi penurunan harga terurut terbaru (`NotificationCard`): judul game, pesan, toko termurah, harga dalam USD, waktu relatif ("Baru saja", "2 jam lalu", "Kemarin", dll.), dan penanda belum dibaca (*accent dot* & *highlight* kartu).
+  - Ketuk notifikasi: langsung menandai notifikasi tersebut sebagai sudah dibaca via `PUT /api/notifications/{id}/read`, memperbarui badge secara lokal, dan menavigasi pengguna ke layar detail game terkait (`GameDetailScreen`).
+  - Tombol *"Tandai semua dibaca"* di AppBar untuk menandai seluruh notifikasi sekaligus via `PUT /api/notifications/read-all`.
+  - Penanganan state lengkap: *Pull-to-refresh*, *pagination infinite scroll*, *loading shimmer skeleton*, *error state* dengan tombol coba lagi, serta *empty state* ramah (*"Belum ada notifikasi"*).
+
+### 2. Statistik Bermain (US-07)
+- **Ringkasan Metrik (`SummaryStatsRow`)**:
+  - Menampilkan 3 kartu ringkasan: Total Game, Jam Bermain (akumulasi `jam_main`), dan Game Tamat (total game berstatus `Tamat`).
+- **Visualisasi Grafik `fl_chart`**:
+  - **Grafik Batang Game Tamat per 12 Bulan Terakhir (`MonthlyCompletedChart`)**: Visualisasi batang `BarChart` beraksen Coral Terracotta (`#E14B44`), label bulan singkat pada sumbu X, grid garis halus, dan tooltip interaktif saat disentuh yang menampilkan jumlah game tamat pada bulan terkait.
+  - **Grafik Donut/Lingkaran Genre Favorit (`FavoriteGenresChart`)**: Visualisasi `PieChart` untuk maksimal 5 genre teratas di library pengguna, dilengkapi persentase dan daftar legenda warna informatif.
+- **Tampilan Kosong yang Informatif**:
+  - Pengguna tanpa data game/library melihat pesan informatif (*"Belum ada data. Tambahkan game ke library untuk melihat statistikmu."*), bukan galat atau grafik rusak.
+- **Pull-to-Refresh & Sinkronisasi Reaktif**:
+  - Halaman profil mendukung *pull-to-refresh* untuk menyegarkan profil, statistik, dan badge notifikasi.
+  - Terintegrasi dengan `LibraryNotifier.instance`: setiap kali ada penambahan, pembaruan, atau penghapusan game di library, tampilan statistik otomatis ter-update seketika.
+
+### 3. Fitur Acak Game Backlog (US-08)
+- **Tombol Acak di Tab Library**:
+  - Tombol aksi pill *"Acak"* dengan ikon dadu (`Icons.casino_rounded`) disematkan secara jelas terlihat di AppBar Tab Library.
+- **Modal Bottom Sheet Rekomendasi Game (`RandomGameSheet`)**:
+  - Menampilkan game acak yang diambil dari endpoint `GET /api/library/random`: cover game dengan overlay gradient scrim, judul game, genre chip, dan rating bintang.
+  - Dua aksi interaktif:
+    1. *"Mainkan sekarang"*: Mengubah status game terpilih menjadi `Sedang Dimainkan` via endpoint `PUT /api/library/{id}`, memperbarui Tab Library secara reaktif, menutup sheet, dan memberikan notifikasi feedback SnackBar.
+    2. *"Acak ulang"*: Mengambil kembali game acak berikutnya dari backlog dengan animasi loading yang mulus di dalam sheet.
+  - **Penanganan Backlog Kosong**: Bila pengguna tidak memiliki game berstatus Backlog (HTTP 404), sheet menampilkan pesan penjelasan ramah (*"Backlog kosong. Tambahkan game dengan status Backlog dulu."*) beserta tombol penutup.
+
+---
+
+## 🧪 Hasil Pengujian Otomatis Mobile Terkini
+- **Flutter Analyzer**: `flutter analyze` -> **No issues found!** (0 error, 0 warning, 0 hint).
+- **Flutter Unit & Widget Tests**: `flutter test` -> **All 38 tests passed!** (100% lulus).
+
+---
+
+## 🎮 Tahap 6 / F-11: Rekomendasi Game Serupa & Berdasarkan Genre Library
+
+Tahap ini mengimplementasikan fitur F-11 sesuai spesifikasi PRD dan aturan `rules_mainga.md`, yang memberikan rekomendasi game terpersonalisasi berdasarkan preferensi genre di library pengguna serta menampilkan daftar game serupa pada layar detail game:
+
+### 1. Endpoint REST API Terproteksi (`auth:sanctum`)
+- `GET /api/recommendations`:
+  - Menghasilkan daftar rekomendasi game (maksimal 10) berdasarkan maksimal 3 genre teratas dari koleksi library milik pengguna yang sedang login.
+  - Setiap item game memuat field yang seragam dengan katalog game ditambah `alasan` singkat rekomendasi (misal: `"Karena kamu suka Action dan RPG"`).
+  - Mengambil kandidat dari data cache tabel `games` yang memiliki genre tersebut dan belum pernah ada di library pengguna (termasuk status Wishlist).
+  - Diurutkan berdasarkan jumlah kesesuaian genre teratas terbanyak, kemudian rating RAWG tertinggi.
+  - Jika kandidat di cache lokal kurang dari 10, backend melengkapi data lewat `RawgService` (`genres` genre teratas dan ordering `-rating`) dengan tetap menghormati aturan cache 7 hari.
+  - Bila RAWG tidak dapat dijangkau, sistem mengembalikan kandidat lokal yang ada secara aman tanpa error 500.
+  - Pengguna tanpa entri library (atau seluruhnya berstatus `Dropped`) menerima respons HTTP 200 dengan `data: []` dan pesan informatif `"Belum ada rekomendasi. Tambahkan game ke library Anda untuk mendapatkan rekomendasi."`.
+  - Hasil rekomendasi per pengguna di-cache di Laravel Cache selama 1 jam (`user_recommendations_{user_id}`) dan otomatis dihapus (*cache invalidation*) ketika entri library pengguna bertambah, berubah status, atau dihapus.
+- `GET /api/games/{id}/similar`:
+  - Menghasilkan daftar game serupa untuk suatu game spesifik berdasarkan kesamaan genre (diurutkan berdasarkan jumlah genre yang sama terbanyak, kemudian rating tertinggi).
+  - Maksimal 10 game, dan dijamin tidak memuat game target itu sendiri.
+  - Mengambil data dari cache database lokal, dan melengkapi lewat RAWG hanya jika hasil lokal kurang dari 5 game.
+
+### 2. Aturan Bobot Genre Perpustakaan Pengguna
+Penentuan maksimal 3 genre teratas dihitung melalui relasi pivot `game_genre` dari `library_entries` milik pengguna dengan formula pembobotan sederhana dan deterministik:
+- **Game Berstatus `Dropped`**: Diberi bobot `0` (diabaikan sepenuhnya dan tidak memengaruhi kalkulasi genre).
+- **Bobot Dasar (Base Weight)**: Setiap game berstatus `Wishlist`, `Backlog`, `Sedang Dimainkan`, atau `Tamat` memiliki bobot dasar `+1`.
+- **Tambahan Status Aktif / Tamat**: Game dengan status `Tamat` atau `Sedang Dimainkan` memperoleh bobot tambahan `+1`.
+- **Tambahan Rating Pribadi Tinggi**: Game dengan `rating_pribadi >= 8` (skala 1-10) memperoleh bobot tambahan `+1`.
+- **Total Akumulasi**: Setiap genre yang terhubung pada game tersebut menerima total bobot dari game bersangkutan (bobot 1 untuk Backlog/Wishlist biasa, bobot 2 untuk Tamat/Sedang Dimainkan atau Backlog dengan rating tinggi, dan bobot maksimal 3 untuk Tamat/Sedang Dimainkan dengan rating >= 8). Tiga genre dengan total skor tertinggi dipilih sebagai preferensi pengguna.
+
+### 3. Implementasi Mobile (Flutter)
+- **Tab Jelajah**:
+  - Bagian *"Rekomendasi untuk kamu"* ditampilkan berupa daftar horizontal di atas daftar utama katalog game.
+  - Bagian ini hanya tampil saat kolom pencarian kosong dan tidak ada filter aktif.
+  - Menampilkan kartu game rekomendasi (`cover`, `judul`, badge `rating`, dan teks `alasan` singkat). Ketukan pada kartu langsung membuka layar detail game.
+  - Bila rekomendasi belum tersedia (library kosong), ditampilkan pesan informatif *"Tambahkan game ke library untuk mendapat rekomendasi"*.
+  - Indikator pemuatan berukuran kecil dan tidak memblokir antarmuka Jelajah. Galat jaringan tidak merusak halaman Jelajah.
+  - Terintegrasi dengan `LibraryNotifier`: penambahan, pengubahan, atau penghapusan game di library langsung menyinkronkan rekomendasi pada kunjungan berikutnya tanpa perlu me-restart aplikasi.
+  - Mendukung *Pull-to-refresh* yang menyegarkan daftar game sekaligus rekomendasi pengguna.
+- **Layar Detail Game**:
+  - Bagian *"Game serupa"* ditampilkan berupa daftar horizontal kartu game dari endpoint `/api/games/{id}/similar`.
+  - Sembunyi secara otomatis bila tidak ada game serupa yang tersedia.
+
+### 4. Hasil Pengujian Otomatis Fitur F-11
+- **Backend (Laravel Feature Tests)**:
+  - `php artisan test --without-tty` -> **85 passed, 464 assertions, 0 failed**.
+  - Termasuk 10 test komprehensif pada `tests/Feature/RecommendationTest.php` yang menguji bobot genre, isolasi kepemilikan data antar pengguna, pengecualian game yang sudah dimiliki, pengabaian status Dropped, penanganan empty state, proteksi 401, invalidasi cache reaktif, fallback kegagalan RAWG, dan pencegahan duplikasi game itu sendiri pada similar games.
+- **Mobile (Flutter Tests & Analysis)**:
+  - `flutter analyze` -> **No issues found!** (0 error, 0 warning, 0 hint).
+  - `flutter test` -> **41 passed, 0 failed**.
+
+---
+
 ## 🎨 Redesain Warna: Hitam-Putih-Lime (60-30-10)
 
 Aplikasi **MainGa?** telah menerapkan redesain palet warna menyeluruh dengan aturan visual **60-30-10** berlandaskan prinsip *anti-slop* dari panduan desain UI berkelas (`design-taste-frontend`). Redesain ini merupakan perubahan **warna murni** tanpa mengubah struktur layout, ukuran, logika bisnis, endpoint, database, maupun susunan folder.
