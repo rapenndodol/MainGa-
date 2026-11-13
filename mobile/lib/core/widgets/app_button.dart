@@ -71,16 +71,18 @@ class _AppButtonState extends State<AppButton> {
         break;
     }
 
-    final bool isDisabled = widget.onPressed == null || widget.isLoading;
+    final bool isDisabled = widget.onPressed == null;
+    final bool isBusy = isDisabled || widget.isLoading;
 
     return Semantics(
       button: true,
       enabled: !isDisabled,
+      value: widget.isLoading ? 'Memuat' : null,
       child: SizedBox(
         width: widget.width,
         height: widget.height,
         child: AnimatedScale(
-          scale: _pressed && !isDisabled ? 0.98 : 1.0,
+          scale: _pressed && !isBusy ? 0.98 : 1.0,
           duration: AppMotion.fast,
           curve: AppMotion.curve,
           child: Material(
@@ -92,10 +94,10 @@ class _AppButtonState extends State<AppButton> {
             child: InkWell(
               borderRadius: AppRadius.fullBorderRadius,
               onHighlightChanged: (value) {
-                if (isDisabled) return;
+                if (isBusy) return;
                 setState(() => _pressed = value);
               },
-              onTap: isDisabled
+              onTap: isBusy
                   ? null
                   : () {
                       HapticFeedback.lightImpact();

@@ -15,10 +15,12 @@ import '../../data/models/game_model.dart';
 
 class GameDetailScreen extends StatefulWidget {
   final GameModel game;
+  final String? heroTag;
 
   const GameDetailScreen({
     super.key,
     required this.game,
+    this.heroTag,
   });
 
   @override

@@ -37,6 +37,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
               ? Padding(
                   padding: const EdgeInsets.all(AppSpacing.xs),
                   child: IconButton(
+                    tooltip: 'Kembali',
                     icon: const Icon(
                       Icons.arrow_back_ios_new_rounded,
                       size: 18,

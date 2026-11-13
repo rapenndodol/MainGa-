@@ -82,8 +82,14 @@ class _AppSkeletonBoxState extends State<AppSkeletonBox>
 }
 
 /// Skeleton untuk kartu game dalam daftar.
+///
+/// [surfaced] dipertahankan untuk daftar bergaya kartu (Library/Notifikasi),
+/// sedangkan Jelajah memakai varian tanpa permukaan agar bentuknya sama
+/// dengan [AppGameCard] yang editorial.
 class AppGameCardSkeleton extends StatelessWidget {
-  const AppGameCardSkeleton({super.key});
+  final bool surfaced;
+
+  const AppGameCardSkeleton({super.key, this.surfaced = true});
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +97,7 @@ class AppGameCardSkeleton extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: surfaced ? AppColors.surface : AppColors.transparent,
         borderRadius: AppRadius.lgBorderRadius,
       ),
       child: Row(
@@ -99,45 +105,48 @@ class AppGameCardSkeleton extends StatelessWidget {
         children: [
           // Cover skeleton (3:4)
           AppSkeletonBox(
-            width: 84,
-            height: 112,
+            width: 88,
+            height: 118,
             borderRadius: AppRadius.mdBorderRadius,
           ),
-          const SizedBox(width: AppSpacing.md),
+          const SizedBox(width: AppSpacing.lg),
           // Content info skeleton
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: AppSpacing.xs),
-                AppSkeletonBox(
-                  width: double.infinity,
-                  height: 16,
-                  borderRadius: BorderRadius.circular(AppRadius.control),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                AppSkeletonBox(
-                  width: 140,
-                  height: 14,
-                  borderRadius: BorderRadius.circular(AppRadius.control),
-                ),
-                const SizedBox(height: AppSpacing.lg + AppSpacing.xxs),
-                Row(
-                  children: [
-                    AppSkeletonBox(
-                      width: 50,
-                      height: 22,
-                      borderRadius: AppRadius.fullBorderRadius,
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    AppSkeletonBox(
-                      width: 44,
-                      height: 14,
-                      borderRadius: BorderRadius.circular(AppRadius.control),
-                    ),
-                  ],
-                ),
-              ],
+            child: SizedBox(
+              height: 118,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: AppSpacing.xs),
+                  AppSkeletonBox(
+                    width: double.infinity,
+                    height: 16,
+                    borderRadius: BorderRadius.circular(AppRadius.control),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  AppSkeletonBox(
+                    width: 140,
+                    height: 14,
+                    borderRadius: BorderRadius.circular(AppRadius.control),
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      AppSkeletonBox(
+                        width: 52,
+                        height: 22,
+                        borderRadius: AppRadius.fullBorderRadius,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      AppSkeletonBox(
+                        width: 40,
+                        height: 14,
+                        borderRadius: BorderRadius.circular(AppRadius.control),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -149,20 +158,90 @@ class AppGameCardSkeleton extends StatelessWidget {
 /// Skeleton untuk daftar list game (misal saat Jelajah / Library sedang loading)
 class AppListSkeleton extends StatelessWidget {
   final int itemCount;
+  final bool surfaced;
+  final EdgeInsetsGeometry padding;
 
-  const AppListSkeleton({super.key, this.itemCount = 6});
+  const AppListSkeleton({
+    super.key,
+    this.itemCount = 6,
+    this.surfaced = true,
+    this.padding = const EdgeInsets.symmetric(
+      horizontal: AppSpacing.lg,
+      vertical: AppSpacing.sm,
+    ),
+  });
 
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.sm,
-      ),
+      padding: padding,
       itemCount: itemCount,
-      itemBuilder: (_, _) => const AppGameCardSkeleton(),
+      itemBuilder: (_, _) => AppGameCardSkeleton(surfaced: surfaced),
+    );
+  }
+}
+
+/// Skeleton horizontal untuk carousel rekomendasi di Jelajah.
+class AppRecommendationSkeleton extends StatelessWidget {
+  final double height;
+
+  const AppRecommendationSkeleton({super.key, this.height = 208});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final double cardWidth = constraints.maxWidth * 0.86;
+          return ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            itemCount: 2,
+            separatorBuilder: (_, _) =>
+                const SizedBox(width: AppSpacing.md),
+            itemBuilder: (_, _) {
+              return Container(
+                width: cardWidth,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: AppRadius.cardBorderRadius,
+                  border: Border.all(
+                    color: AppColors.border.withValues(alpha: 0.4),
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Stack(
+                  children: [
+                    const Positioned.fill(
+                      child: AppSkeletonBox(
+                        height: 208,
+                        borderRadius: BorderRadius.zero,
+                      ),
+                    ),
+                    Positioned(
+                      left: AppSpacing.lg,
+                      right: AppSpacing.lg,
+                      bottom: AppSpacing.lg,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          AppSkeletonBox(width: 160, height: 16),
+                          SizedBox(height: AppSpacing.sm),
+                          AppSkeletonBox(width: 110, height: 12),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

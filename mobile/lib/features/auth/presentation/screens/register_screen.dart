@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import '../../../../core/storage/token_storage.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/app_password_field.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../home/presentation/screens/home_screen.dart';
 import '../../data/datasources/auth_remote_data_source.dart';
+import '../auth_error_helpers.dart';
+import '../widgets/auth_inline_error.dart';
+import '../widgets/auth_page_shell.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -21,10 +25,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
   final _authDataSource = AuthRemoteDataSource();
 
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
+  static const Set<String> _knownFields = <String>{
+    'nama',
+    'email',
+    'password',
+    'password_confirmation',
+  };
+
   bool _isLoading = false;
   String? _errorMessage;
+  Map<String, String> _serverErrors = const <String, String>{};
 
   @override
   void dispose() {
@@ -36,17 +46,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _handleRegister() async {
+    FocusScope.of(context).unfocus();
     setState(() {
       _errorMessage = null;
+      _serverErrors = const <String, String>{};
     });
 
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     final result = await _authDataSource.register(
       nama: _namaController.text.trim(),
@@ -55,10 +65,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
 
     if (!mounted) return;
-
-    setState(() {
-      _isLoading = false;
-    });
 
     if (result.success && result.token != null) {
       await TokenStorage.saveToken(result.token!);
@@ -75,255 +81,192 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         (route) => false,
       );
-    } else {
-      String displayMsg = result.message;
-      if (result.errors != null && result.errors!.isNotEmpty) {
-        final List<String> errorLines = [];
-        result.errors!.forEach((key, value) {
-          if (value is List) {
-            errorLines.addAll(value.map((e) => e.toString()));
-          } else {
-            errorLines.add(value.toString());
-          }
-        });
-        if (errorLines.isNotEmpty) {
-          displayMsg = errorLines.join('\n');
-        }
-      }
-
-      setState(() {
-        _errorMessage = displayMsg.isNotEmpty
-            ? displayMsg
-            : 'Registrasi gagal. Silakan coba lagi.';
-      });
+      return;
     }
+
+    final fieldErrors = parseAuthFieldErrors(result.errors);
+    final extraErrors = fieldErrors.entries
+        .where((entry) => !_knownFields.contains(entry.key))
+        .map((entry) => entry.value)
+        .where((value) => value.isNotEmpty)
+        .join('\n');
+
+    setState(() {
+      _isLoading = false;
+      _serverErrors = fieldErrors;
+      if (extraErrors.isNotEmpty) {
+        _errorMessage = extraErrors;
+      } else if (fieldErrors.isEmpty) {
+        _errorMessage = result.message.isNotEmpty
+            ? result.message
+            : 'Registrasi gagal. Silakan coba lagi.';
+      } else {
+        _errorMessage = null;
+      }
+    });
+    _formKey.currentState?.validate();
+  }
+
+  void _clearServerError(String field) {
+    if (!_serverErrors.containsKey(field) && _errorMessage == null) return;
+    setState(() {
+      _serverErrors = Map<String, String>.from(_serverErrors)..remove(field);
+      _errorMessage = null;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        backgroundColor: AppColors.bg,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text('Buat Akun Baru', style: AppTypography.titleLarge),
-        leading: Padding(
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          child: IconButton(
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              size: 18,
-              color: AppColors.textPrimary,
-            ),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-      ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xxl,
-              vertical: AppSpacing.lg,
-            ),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Bergabung di MainGa?',
-                    style: AppTypography.displayMedium.copyWith(
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Mulai kelola backlog dan wishlist game impianmu hari ini.',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-
-                  // Error Message Banner
-                  if (_errorMessage != null) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
-                        vertical: AppSpacing.md,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.error.withValues(alpha: 0.12),
-                        borderRadius: AppRadius.mdBorderRadius,
-                        border: Border.all(
-                          color: AppColors.error.withValues(alpha: 0.35),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline_rounded,
-                              color: AppColors.error, size: 20),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: AppTypography.bodySmall.copyWith(
-                                color: AppColors.error,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                  ],
-
-                  // Field Nama Lengkap
-                  AppTextField(
-                    controller: _namaController,
-                    label: 'Nama Lengkap',
-                    hint: 'masukkan nama lengkap',
-                    prefixIcon: Icons.person_outline_rounded,
-                    validator: (val) {
-                      if (val == null || val.trim().isEmpty) {
-                        return 'Nama lengkap wajib diisi';
-                      }
-                      return null;
-                    },
-                  ),
+    return AuthPageShell(
+      title: 'Bergabung di MainGa?',
+      subtitle: 'Mulai rapikan backlog dan incar diskon game favoritmu hari '
+          'ini. Gratis, tanpa perlu akun toko.',
+      onBack: () => Navigator.pop(context),
+      children: [
+        AutofillGroup(
+          child: Form(
+            key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AppTextField(
+                  controller: _namaController,
+                  label: 'Nama Lengkap',
+                  hint: 'nama kamu',
+                  prefixIcon: Icons.person_outline_rounded,
+                  textInputAction: TextInputAction.next,
+                  textCapitalization: TextCapitalization.words,
+                  autofillHints: const [AutofillHints.name],
+                  enabled: !_isLoading,
+                  onChanged: (_) => _clearServerError('nama'),
+                  validator: (val) {
+                    final serverError = _serverErrors['nama'];
+                    if (serverError != null) return serverError;
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Nama lengkap wajib diisi';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                AppTextField(
+                  controller: _emailController,
+                  label: 'Email',
+                  hint: 'nama@email.com',
+                  prefixIcon: Icons.alternate_email_rounded,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.email],
+                  enabled: !_isLoading,
+                  onChanged: (_) => _clearServerError('email'),
+                  validator: (val) {
+                    final serverError = _serverErrors['email'];
+                    if (serverError != null) return serverError;
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Email wajib diisi';
+                    }
+                    final emailRegex =
+                        RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                    if (!emailRegex.hasMatch(val.trim())) {
+                      return 'Format email tidak valid';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                AppPasswordField(
+                  controller: _passwordController,
+                  label: 'Password',
+                  hint: 'minimal 8 karakter',
+                  autofillHints: const [AutofillHints.newPassword],
+                  enabled: !_isLoading,
+                  onChanged: (_) => _clearServerError('password'),
+                  validator: (val) {
+                    final serverError = _serverErrors['password'];
+                    if (serverError != null) return serverError;
+                    if (val == null || val.isEmpty) {
+                      return 'Password wajib diisi';
+                    }
+                    if (val.length < 8) {
+                      return 'Password minimal 8 karakter';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                AppPasswordField(
+                  controller: _confirmPasswordController,
+                  label: 'Konfirmasi Password',
+                  hint: 'ulangi password',
+                  textInputAction: TextInputAction.done,
+                  autofillHints: const [AutofillHints.newPassword],
+                  enabled: !_isLoading,
+                  onChanged: (_) =>
+                      _clearServerError('password_confirmation'),
+                  onFieldSubmitted: (_) => _handleRegister(),
+                  validator: (val) {
+                    final serverError =
+                        _serverErrors['password_confirmation'];
+                    if (serverError != null) return serverError;
+                    if (val == null || val.isEmpty) {
+                      return 'Konfirmasi password wajib diisi';
+                    }
+                    if (val != _passwordController.text) {
+                      return 'Konfirmasi password tidak cocok';
+                    }
+                    return null;
+                  },
+                ),
+                if (_errorMessage != null) ...[
                   const SizedBox(height: AppSpacing.lg),
-
-                  // Field Email
-                  AppTextField(
-                    controller: _emailController,
-                    label: 'Email',
-                    hint: 'masukkan alamat email',
-                    prefixIcon: Icons.alternate_email_rounded,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (val) {
-                      if (val == null || val.trim().isEmpty) {
-                        return 'Email wajib diisi';
-                      }
-                      final emailRegex =
-                          RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                      if (!emailRegex.hasMatch(val.trim())) {
-                        return 'Format email tidak valid';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // Field Password
-                  AppTextField(
-                    controller: _passwordController,
-                    label: 'Password',
-                    hint: 'minimal 8 karakter',
-                    prefixIcon: Icons.lock_outline_rounded,
-                    obscureText: _obscurePassword,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: AppColors.textMuted,
-                        size: 20,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                    validator: (val) {
-                      if (val == null || val.isEmpty) {
-                        return 'Password wajib diisi';
-                      }
-                      if (val.length < 8) {
-                        return 'Password minimal 8 karakter';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // Field Konfirmasi Password
-                  AppTextField(
-                    controller: _confirmPasswordController,
-                    label: 'Konfirmasi Password',
-                    hint: 'ulangi password',
-                    prefixIcon: Icons.lock_clock_outlined,
-                    obscureText: _obscureConfirmPassword,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _handleRegister(),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureConfirmPassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: AppColors.textMuted,
-                        size: 20,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _obscureConfirmPassword = !_obscureConfirmPassword;
-                        });
-                      },
-                    ),
-                    validator: (val) {
-                      if (val == null || val.isEmpty) {
-                        return 'Konfirmasi password wajib diisi';
-                      }
-                      if (val != _passwordController.text) {
-                        return 'Konfirmasi password tidak cocok';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.xxl),
-
-                  // Tombol Registrasi
-                  AppButton(
-                    text: 'Daftar Sekarang',
-                    onPressed: _handleRegister,
-                    isLoading: _isLoading,
-                    icon: Icons.person_add_rounded,
-                    variant: AppButtonVariant.primary,
-                    height: 52,
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-
-                  // Redirect ke Login
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Sudah punya akun? ',
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: Text(
-                          'Masuk di sini',
-                          style: AppTypography.labelMedium.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  AuthInlineError(message: _errorMessage!),
                 ],
-              ),
+                const SizedBox(height: AppSpacing.xxl),
+                AppButton(
+                  text: 'Daftar Sekarang',
+                  onPressed: _isLoading ? null : _handleRegister,
+                  isLoading: _isLoading,
+                  icon: Icons.person_add_rounded,
+                  variant: AppButtonVariant.primary,
+                  height: 54,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _buildLoginPrompt(),
+              ],
             ),
           ),
         ),
-      ),
+      ],
+    );
+  }
+
+  Widget _buildLoginPrompt() {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(
+          'Sudah punya akun?',
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.textPrimary,
+            minimumSize: const Size(48, 48),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            textStyle: AppTypography.labelMedium.copyWith(
+              fontWeight: FontWeight.w700,
+              decoration: TextDecoration.underline,
+              decorationColor: AppColors.textPrimary,
+            ),
+          ),
+          child: const Text('Masuk di sini'),
+        ),
+      ],
     );
   }
 }
