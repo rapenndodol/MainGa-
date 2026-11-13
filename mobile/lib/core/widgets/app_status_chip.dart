@@ -69,7 +69,8 @@ class AppStatusChip extends StatelessWidget {
     final icon = AppStatusHelper.getStatusIcon(status);
 
     final content = AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
+      duration: AppMotion.base,
+      curve: AppMotion.curve,
       padding: EdgeInsets.symmetric(
         horizontal: compact ? AppSpacing.sm : AppSpacing.md,
         vertical: compact ? AppSpacing.xs : AppSpacing.xs + 3,
@@ -95,10 +96,12 @@ class AppStatusChip extends StatelessWidget {
           const SizedBox(width: AppSpacing.xs + 1),
           Text(
             status,
-            style: AppTypography.labelSmall.copyWith(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: compact ? 11 : 12,
+            style: AppTypography.tabular(
+              AppTypography.labelSmall.copyWith(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: compact ? 11 : 12,
+              ),
             ),
           ),
         ],
@@ -106,10 +109,17 @@ class AppStatusChip extends StatelessWidget {
     );
 
     if (onTap != null) {
-      return InkWell(
-        borderRadius: AppRadius.fullBorderRadius,
-        onTap: onTap,
-        child: content,
+      return Semantics(
+        button: true,
+        selected: isSelected,
+        child: InkWell(
+          borderRadius: AppRadius.fullBorderRadius,
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Center(widthFactor: 1, child: content),
+          ),
+        ),
       );
     }
 

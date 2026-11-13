@@ -12,11 +12,11 @@ class FavoriteGenresChart extends StatelessWidget {
   });
 
   static const List<Color> _palette = [
-    AppColors.primary,
-    AppColors.secondary,
-    AppColors.statusCompleted,
-    AppColors.statusWishlist,
-    Color(0xFF8B5CF6),
+    AppColors.chartDonutSlice1,
+    AppColors.chartDonutSlice2,
+    AppColors.chartDonutSlice3,
+    AppColors.chartDonutSlice4,
+    AppColors.chartDonutSlice5,
   ];
 
   @override
@@ -91,10 +91,14 @@ class FavoriteGenresChart extends StatelessWidget {
                     value: item.jumlah.toDouble(),
                     title: '${pct.round()}%',
                     radius: 36,
-                    titleStyle: AppTypography.labelSmall.copyWith(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: index == 1 ? Colors.black87 : Colors.white,
+                    titleStyle: AppTypography.tabular(
+                      AppTypography.labelSmall.copyWith(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: color.computeLuminance() > 0.35
+                            ? AppColors.onPrimary
+                            : AppColors.textPrimary,
+                      ),
                     ),
                   );
                 }),

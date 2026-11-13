@@ -52,7 +52,7 @@ class WishlistGameCard extends StatelessWidget {
             : null,
       ),
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.transparent,
         child: InkWell(
           borderRadius: AppRadius.lgBorderRadius,
           onTap: onTap,

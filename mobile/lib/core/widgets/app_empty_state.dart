@@ -28,51 +28,54 @@ class AppEmptyState extends StatelessWidget {
           horizontal: AppSpacing.xxl,
           vertical: AppSpacing.xxl,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.surfaceElevated,
-                border: Border.all(color: AppColors.border, width: 1.5),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.surfaceElevated,
+                  border: Border.all(
+                    color: AppColors.border.withValues(alpha: 0.7),
+                    width: 1,
+                  ),
+                ),
+                child: Icon(
+                  icon,
+                  size: 38,
+                  color: AppColors.textPrimary,
+                ),
               ),
-              child: Icon(
-                icon,
-                size: 38,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: AppTypography.titleLarge.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              description,
-              textAlign: TextAlign.center,
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-                height: 1.5,
-              ),
-            ),
-            if (actionText != null && onAction != null) ...[
               const SizedBox(height: AppSpacing.xl),
-              AppButton(
-                text: actionText!,
-                onPressed: onAction,
-                variant: AppButtonVariant.outline,
-                height: 44,
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: AppTypography.titleLarge,
               ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                description,
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.5,
+                ),
+              ),
+              if (actionText != null && onAction != null) ...[
+                const SizedBox(height: AppSpacing.xl),
+                AppButton(
+                  text: actionText!,
+                  onPressed: onAction,
+                  variant: AppButtonVariant.outline,
+                  height: 48,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

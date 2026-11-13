@@ -23,55 +23,55 @@ class AppErrorState extends StatelessWidget {
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(AppSpacing.xxl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.error.withValues(alpha: 0.12),
-                border: Border.all(
-                  color: AppColors.error.withValues(alpha: 0.35),
-                  width: 1.5,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.error.withValues(alpha: 0.12),
+                  border: Border.all(
+                    color: AppColors.error.withValues(alpha: 0.35),
+                    width: 1,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.wifi_off_rounded,
+                  size: 34,
+                  color: AppColors.error,
                 ),
               ),
-              child: const Icon(
-                Icons.wifi_off_rounded,
-                size: 34,
-                color: AppColors.error,
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: AppTypography.titleLarge,
               ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: AppTypography.titleLarge.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.5,
+                ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
-                height: 1.45,
-              ),
-            ),
-            if (onRetry != null) ...[
-              const SizedBox(height: AppSpacing.xl),
-              AppButton(
-                text: retryText,
-                icon: Icons.refresh_rounded,
-                onPressed: onRetry,
-                variant: AppButtonVariant.primary,
-                height: 46,
-              ),
+              if (onRetry != null) ...[
+                const SizedBox(height: AppSpacing.xl),
+                AppButton(
+                  text: retryText,
+                  icon: Icons.refresh_rounded,
+                  onPressed: onRetry,
+                  variant: AppButtonVariant.primary,
+                  height: 48,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

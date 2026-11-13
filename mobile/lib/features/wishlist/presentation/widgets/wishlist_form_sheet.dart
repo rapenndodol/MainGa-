@@ -25,7 +25,7 @@ class WishlistFormSheet extends StatefulWidget {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(ctx).viewInsets.bottom,
@@ -141,7 +141,7 @@ class _WishlistFormSheetState extends State<WishlistFormSheet> {
           SnackBar(
             content: Text(
               result['message'] ?? 'Wishlist berhasil diperbarui',
-              style: AppTypography.bodySmall.copyWith(color: Colors.white),
+              style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary),
             ),
             backgroundColor: AppColors.surfaceElevated,
             behavior: SnackBarBehavior.floating,
@@ -177,7 +177,7 @@ class _WishlistFormSheetState extends State<WishlistFormSheet> {
           SnackBar(
             content: Text(
               result['message'] ?? 'Game berhasil ditambahkan ke wishlist',
-              style: AppTypography.bodySmall.copyWith(color: Colors.white),
+              style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary),
             ),
             backgroundColor: AppColors.surfaceElevated,
             behavior: SnackBarBehavior.floating,
@@ -226,7 +226,7 @@ class _WishlistFormSheetState extends State<WishlistFormSheet> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.textPrimary,
               shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBorderRadius),
             ),
             onPressed: () => Navigator.pop(ctx, true),
@@ -255,7 +255,7 @@ class _WishlistFormSheetState extends State<WishlistFormSheet> {
         SnackBar(
           content: Text(
             result['message'] ?? 'Game berhasil dihapus dari wishlist',
-            style: AppTypography.bodySmall.copyWith(color: Colors.white),
+            style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary),
           ),
           backgroundColor: AppColors.surfaceElevated,
           behavior: SnackBarBehavior.floating,

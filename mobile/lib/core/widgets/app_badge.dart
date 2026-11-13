@@ -94,10 +94,12 @@ class AppBadge extends StatelessWidget {
           ],
           Text(
             label,
-            style: AppTypography.labelSmall.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-              fontSize: compact ? 11 : 12,
+            style: AppTypography.tabular(
+              AppTypography.labelSmall.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+                fontSize: compact ? 11 : 12,
+              ),
             ),
           ),
         ],

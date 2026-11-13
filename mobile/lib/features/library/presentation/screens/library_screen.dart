@@ -159,7 +159,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             padding: const EdgeInsets.only(right: AppSpacing.sm),
             child: Center(
               child: Material(
-                color: Colors.transparent,
+                color: AppColors.transparent,
                 child: InkWell(
                   borderRadius: AppRadius.fullBorderRadius,
                   onTap: () => RandomGameSheet.show(context),

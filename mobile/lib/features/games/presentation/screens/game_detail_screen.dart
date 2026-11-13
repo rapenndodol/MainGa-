@@ -535,7 +535,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Material(
-                  color: Colors.transparent,
+                  color: AppColors.transparent,
                   child: InkWell(
                     onTap: () {
                       Navigator.push(
@@ -573,7 +573,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.75),
+                                  color: AppColors.black.withValues(alpha: 0.75),
                                   borderRadius: AppRadius.fullBorderRadius,
                                   border: Border.all(
                                     color: AppColors.border.withValues(alpha: 0.5),
@@ -674,7 +674,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
           borderRadius: AppRadius.lgBorderRadius,
         ),
         child: Material(
-          color: Colors.transparent,
+          color: AppColors.transparent,
           child: InkWell(
             borderRadius: AppRadius.lgBorderRadius,
             onTap: _openLibraryForm,
@@ -686,7 +686,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                   Icon(
                     Icons.bookmark_add_outlined,
                     size: 18,
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                   ),
                   SizedBox(width: AppSpacing.xs + 2),
                   Flexible(
@@ -697,7 +697,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ),
@@ -766,7 +766,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
           ),
         ),
         child: Material(
-          color: Colors.transparent,
+          color: AppColors.transparent,
           child: InkWell(
             borderRadius: AppRadius.lgBorderRadius,
             onTap: _openWishlistForm,
@@ -816,7 +816,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
         ),
       ),
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.transparent,
         child: InkWell(
           borderRadius: AppRadius.lgBorderRadius,
           onTap: _openWishlistForm,

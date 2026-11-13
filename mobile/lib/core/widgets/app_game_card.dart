@@ -4,8 +4,9 @@ import '../../features/games/presentation/screens/game_detail_screen.dart';
 import '../theme/app_theme.dart';
 import 'app_badge.dart';
 
-/// Reusable Game Card sesuai referensi visual MainGa?.
-class AppGameCard extends StatelessWidget {
+/// Kartu game reusable dengan cover rasio poster 3:4 dan permukaan
+/// tanpa border—pemisahan bidang memakai tone step.
+class AppGameCard extends StatefulWidget {
   final GameModel game;
   final VoidCallback? onTap;
 
@@ -16,41 +17,50 @@ class AppGameCard extends StatelessWidget {
   });
 
   @override
+  State<AppGameCard> createState() => _AppGameCardState();
+}
+
+class _AppGameCardState extends State<AppGameCard> {
+  bool _pressed = false;
+
+  void _openDetail() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GameDetailScreen(game: widget.game),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: _pressed ? AppColors.surfaceElevated : AppColors.surface,
         borderRadius: AppRadius.lgBorderRadius,
-        border: Border.all(color: AppColors.border, width: 1),
       ),
       clipBehavior: Clip.antiAlias,
       child: Material(
         color: AppColors.transparent,
         child: InkWell(
-          onTap: onTap ??
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => GameDetailScreen(game: game),
-                  ),
-                );
-              },
+          onHighlightChanged: (value) => setState(() => _pressed = value),
+          onTap: widget.onTap ?? _openDetail,
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Cover Thumbnail ──────────────────────────────
+                // ── Cover Thumbnail (3:4) ────────────────────────
                 ClipRRect(
                   borderRadius: AppRadius.mdBorderRadius,
                   child: SizedBox(
-                    width: 82,
-                    height: 110,
-                    child: game.coverUrl != null && game.coverUrl!.isNotEmpty
+                    width: 84,
+                    height: 112,
+                    child: widget.game.coverUrl != null &&
+                            widget.game.coverUrl!.isNotEmpty
                         ? Image.network(
-                            game.coverUrl!,
+                            widget.game.coverUrl!,
                             fit: BoxFit.cover,
                             errorBuilder: (_, _, _) => _buildCoverFallback(),
                             loadingBuilder: (context, child, progress) {
@@ -64,7 +74,9 @@ class AppGameCard extends StatelessWidget {
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
                                       valueColor:
-                                          AlwaysStoppedAnimation<Color>(AppColors.primary),
+                                          AlwaysStoppedAnimation<Color>(
+                                        AppColors.primary,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -81,22 +93,17 @@ class AppGameCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Judul Game
                       Text(
-                        game.judul,
+                        widget.game.judul,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTypography.titleMedium.copyWith(
-                          fontWeight: FontWeight.bold,
-                          height: 1.25,
-                        ),
+                        style: AppTypography.titleMedium,
                       ),
                       const SizedBox(height: AppSpacing.xs + 2),
 
-                      // Genre
-                      if (game.genre.isNotEmpty)
+                      if (widget.game.genre.isNotEmpty)
                         Text(
-                          game.genre,
+                          widget.game.genre,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.bodySmall.copyWith(
@@ -105,19 +112,17 @@ class AppGameCard extends StatelessWidget {
                         ),
                       const SizedBox(height: AppSpacing.md),
 
-                      // Baris Rating & Tahun Rilis
                       Row(
                         children: [
-                          // Rating Badge
-                          AppBadge.rating(game.rating, compact: true),
+                          AppBadge.rating(widget.game.rating, compact: true),
                           const SizedBox(width: AppSpacing.sm),
 
-                          // Tanggal / Tahun Rilis
-                          if (game.tanggalRilis != null && game.tanggalRilis!.isNotEmpty)
+                          if (widget.game.tanggalRilis != null &&
+                              widget.game.tanggalRilis!.isNotEmpty)
                             Text(
-                              game.tanggalRilis!.length >= 4
-                                  ? game.tanggalRilis!.substring(0, 4)
-                                  : game.tanggalRilis!,
+                              widget.game.tanggalRilis!.length >= 4
+                                  ? widget.game.tanggalRilis!.substring(0, 4)
+                                  : widget.game.tanggalRilis!,
                               style: AppTypography.labelSmall.copyWith(
                                 color: AppColors.textMuted,
                               ),
@@ -125,7 +130,6 @@ class AppGameCard extends StatelessWidget {
 
                           const Spacer(),
 
-                          // Chevron aksen lembut
                           const Icon(
                             Icons.chevron_right_rounded,
                             size: 20,

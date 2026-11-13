@@ -25,7 +25,7 @@ Tahap 2 mengimplementasikan integrasi katalog game RAWG API dengan strategi *cac
   - 8 Feature Tests komprehensif menggunakan `Http::fake` mencakup pencarian, filter, cache panggilan kedua, detail game, 401 tanpa token, dan penanganan galat RAWG.
 
 - **Mobile (Flutter Android)**:
-  - Navigasi utama 4 tab bergaya melayang (*floating bottom navigation*) dengan warna aksen ungu/indigo: **Jelajah**, **Library**, **Wishlist**, dan **Profil**. Pengguna otomatis diarahkan ke tab Jelajah setelah login.
+  - Navigasi utama 4 tab bergaya melayang (*floating bottom navigation*) dengan warna aksen lime green: **Jelajah**, **Library**, **Wishlist**, dan **Profil**. Pengguna otomatis diarahkan ke tab Jelajah setelah login.
   - **Tab Jelajah**: Kolom pencarian dengan debounce, chip filter genre horizontal, filter platform & rating minimum via modal bottom sheet, daftar kartu game (cover thumbnail, judul, genre, rating), *infinite scroll pagination*, serta *loading*, *empty*, dan *error state*.
   - **Layar Detail Game**: Cover besar dengan gradient scrim, judul game, badge rating & tanggal rilis, tag chip genre & platform, dan deskripsi lengkap dengan tombol toggle *"Baca selengkapnya"*.
   - **Tab Library & Wishlist**: Tampilan kosong yang informatif (*"Belum ada game"*) tanpa teks pengembangan tahap/versi.
@@ -78,7 +78,7 @@ MainGa/
 │   │   │   ├── storage/
 │   │   │   │   └── token_storage.dart  # flutter_secure_storage
 │   │   │   └── theme/
-│   │   │       └── app_theme.dart      # Tema gelap ungu-indigo (anti-slop)
+│   │   │       └── app_theme.dart      # Tema gelap hitam-putih-lime (anti-slop)
 │   │   ├── features/
 │   │   │   ├── auth/                   # Fitur Autentikasi
 │   │   │   │   ├── data/
@@ -109,7 +109,7 @@ MainGa/
 │   │   │       └── presentation/screens/profile_screen.dart
 │   │   └── main.dart
 │   └── test/
-│       └── widget_test.dart            # Unit & Widget Tests Flutter (13 tests)
+│       └── widget_test.dart            # Unit & Widget Tests Flutter (45 tests)
 │
 └── rules/                               # Dokumen Acuan
     ├── PRD_MainGA.md
@@ -318,7 +318,7 @@ Dijalankan dengan perintah: `flutter test`
 3. **Penyelamatan Saat RAWG Gagal (Graceful Degradation)**:
    - Jika panggilan ke RAWG mengalami timeout atau galat jaringan, backend secara otomatis melakukan pencarian pada database lokal `games` dengan filter Eloquent. Jika data lokal ada, sistem mengembalikannya dengan normal; bila tidak ada, sistem mengembalikan kode HTTP 503 dengan pesan JSON yang informatif.
 4. **Navigasi Tab Melayang (Floating Bar)**:
-   - Menggunakan `extendBody: true` pada Scaffold dengan `Container` berpenampilan modern, border halus, bayangan lembut, dan penanda aktif ungu (`Color(0xFF8B5CF6)`), sesuai filosofi anti-slop pada `design_taste_frontend` dan `rules_mainga.md`.
+   - Menggunakan `extendBody: true` pada Scaffold dengan `Container` berpenampilan modern, border halus, bayangan lembut, dan penanda aktif lime (`AppColors.primary` / `#C6F432`), sesuai filosofi anti-slop pada `design_taste_frontend` dan `rules_mainga.md`.
 5. **Atribusi RAWG Sesuai Kebijakan Layanan**:
    - Komponen `RawgAttribution` disematkan di bagian bawah tab Jelajah dan layar detail game, dilengkapi penanganan `url_launcher` untuk membuka situs resmi `https://rawg.io` di browser eksternal.
 
@@ -388,39 +388,40 @@ Tahap 3 mengimplementasikan fitur pengelolaan koleksi dan backlog bermain game m
 
 ---
 
-## 🎨 Desain UI — Redesain Total Identitas Visual (Warm Obsidian & Coral Terracotta)
+## ✨ Pembaruan UI Modern — Design System Phase 1
 
-Sebelum melanjutkan ke Tahap 4 (Wishlist & Price Tracker), aplikasi **MainGa?** telah melalui redesain antarmuka total. Identitas visual lama yang bernuansa gradient ungu-indigo generik telah digantikan secara penuh dengan sistem visual baru yang diturunkan dari referensi desain studio game modern (`docs/ui-reference/reference.jpg`), dirancang dengan standar anti-slop dari skill `design-taste-frontend`.
+Aplikasi **MainGa?** kini memakai fondasi antarmuka yang lebih rapi dan konsisten di seluruh layar. Pembaruan tahap ini berfokus pada **sistem desain presentasi**—tipografi, spasi, radius, gerak, `ThemeData`, dan komponen bersama—tanpa mengubah perilaku aplikasi, data, notifier, validasi, maupun aturan bisnis.
 
 ### 1. Ringkasan Design System
 
-- **Filosofi Visual**: *Warm Obsidian & Crimson Terracotta Gaming Suite*. Menggunakan kanvas gelap dengan saturasi hangat (deep black-cherry obsidian `#140C0F`), bertingkat secara elegan (*tone steps*) tanpa efek glassmorphism murahan atau gradient neon yang berlebihan.
+- **Filosofi Visual**: *Hitam, Putih, dan Lime Green* dengan aturan 60-30-10. Kanvas gelap netral (`#0B0B0C`) menjadi dominasi, putih untuk teks dan kontrol sekunder, serta lime (`#C6F432`) sebagai aksen terbatas. Pemisahan bidang memakai *tone steps*, bukan bayangan atau gradient neon.
 - **Single Source of Truth (`lib/core/theme/`)**:
-  - `app_colors.dart`: Seluruh token warna (`bg`, `surface`, `surfaceElevated`, `primary`, `secondary`, `textPrimary`, `textSecondary`, `status*`). Tidak ada warna yang di-hardcode di layar atau widget.
-  - `app_radius.dart`: Skala radius komponen terukur (`sm: 8.0`, `md: 14.0`, `lg: 20.0`, `xl: 24.0`, `full: 999.0`).
-  - `app_spacing.dart`: Skala jarak konsisten (`xs: 4`, `sm: 8`, `md: 12`, `lg: 16`, `xl: 20`, `xxl: 28`).
-  - `app_typography.dart`: Tipografi modern geometris berbasis **Plus Jakarta Sans** (Google Fonts) dengan kontras bobot tegas antara display, title, body, dan micro-label.
-  - `app_theme.dart`: Konfigurasi global `ThemeData` terpadu untuk tombol, input form, card, bottom sheet, dialog, dan app bar.
+  - `app_colors.dart`: Seluruh token warna (`bg`, `surface`, `surfaceElevated`, `primary`, `secondary`, `textPrimary`, `textSecondary`, `status*`, `chart*`). Tidak ada warna yang di-hardcode di layar atau widget.
+  - `app_typography.dart`: Skala **Plus Jakarta Sans** yang lebih tegas—display `32/26`, title `20/16/14`, body `16/14/12`, label `14/12/11`, plus `overline` dan `metric` dengan angka *tabular* agar nilai tidak bergoyang saat berubah.
+  - `app_spacing.dart`: Ritme jarak 4/8/12/16/20/28/36 dengan token semantik (`section`, `screen`, `cardPadding`, `listPadding`) dan gap siap pakai.
+  - `app_radius.dart`: Skala radius `8/14/20/24/999` dengan alias semantik `control`, `card`, `sheet`, dan `pill`.
+  - `app_motion.dart`: Durasi gerak `150/220/300` ms dengan kurva `easeOutCubic`, plus `AppPageTransitionsBuilder` yang otomatis menonaktifkan animasi saat `MediaQuery.disableAnimations` aktif.
+  - `app_theme.dart`: Konfigurasi global `ThemeData` untuk tombol, input, chip, card, dialog, bottom sheet, snackbar, tooltip, seleksi teks, dan transisi halaman.
 - **Komponen Bersama (`lib/core/widgets/`)**:
-  - `AppButton`: Tombol pill (`radius: 999dp`, tinggi minimal 50dp) dengan varian primer, sekunder, outline, dan destruktif, terintegrasi indikator loading.
-  - `AppTextField`: Input rounded dengan batas fokus `#E14B44` dan latar `#1A1014`.
-  - `AppGameCard`: Kartu game konsisten dengan cover rounded (`14dp`), rating bintang warm amber, genre, tahun rilis, dan penanda detail.
-  - `AppStatusChip`: Chip status bermain dengan warna tematik dan ikon representatif tanpa emoji.
-  - `AppSkeletonBox`, `AppGameCardSkeleton`, `AppListSkeleton`: Animasi pulse shimmer untuk indikator pemuatan data (bukan sekadar spinner polos).
-  - `AppEmptyState`: Tampilan kosong dengan ikon tematik, judul tebal, deskripsi komunikatif, dan tombol aksi pemulihan.
-  - `AppErrorState`: Tampilan galat komunikatif dengan tombol coba lagi.
-  - `AppBadge`: Komponen badge serbaguna untuk rating dan kategori.
-  - `AppHeader`: App bar standar dengan back button yang rapi dan konsisten.
-  - `AppRawgAttribution`: Atribusi resmi RAWG.io dengan tautan aktif yang menyatu dengan estetika warm dark.
+  - `AppButton`: Tombol pill dengan varian primer, sekunder, outline, destruktif, dan ghost; tinggi minimal 48dp, umpan balik tekan halus, haptic ringan, serta indikator loading.
+  - `AppTextField`: Input dengan permukaan gelap, batas fokus lime (`AppColors.borderFocused`), dan area ikon minimal 48dp.
+  - `AppGameCard`: Kartu game tanpa border dengan cover poster 3:4, badge rating *tabular*, genre, tahun rilis, dan state tekan.
+  - `AppStatusChip`: Chip status bermain dengan warna fungsional terdesaturasi dan ikon representatif tanpa emoji.
+  - `AppSkeletonBox`, `AppGameCardSkeleton`, `AppListSkeleton`: Pulse shimmer berbasis token yang menghormati preferensi reduce-motion.
+  - `AppEmptyState` dan `AppErrorState`: Tampilan kosong/galat yang komunikatif dengan aksi pemulihan berukuran 48dp.
+  - `AppBadge`: Badge serbaguna untuk rating dan kategori dengan angka *tabular*.
+  - `AppHeader`: App bar dengan tinggi toolbar adaptif agar aman hingga text scale 1.3.
+  - `AppRawgAttribution`: Atribusi resmi RAWG.io dengan area sentuh 48dp dan teks yang tetap persis sama.
 
 ### 2. Daftar Keputusan Desain
 
-1. **Eliminasi Gradient Ungu & Indigo**: Seluruh gradien ungu lama pada tombol, latar belakang, dan card telah dihapus total. Warna primer digantikan oleh **Coral Crimson** (`#E14B44`) yang dinamis dan berfokus pada aksi utama.
-2. **Elevasi Berdasarkan Tone Steps**: Memisahkan bidang secara visual murni melalui tingkatan tone warna (`#140C0F` -> `#1E1216` -> `#29171E`), bukan menggunakan border tipis yang ramai atau bayangan neon.
-3. **Bentuk Pill Ergonomis**: Selaras dengan referensi, tombol utama, input pencarian, chip filter, dan indikator navigasi mengadopsi bentuk pill penuh yang ramah sentuhan (memenuhi standar aksesibilitas area sentuh minimal 48dp).
-4. **Floating Dock Navigation Bar**: Bar navigasi 4 tab melayang di atas konten dengan sudut membulat penuh (`32dp`), di mana tab aktif diberi penanda pill merah koral `#E14B44` dengan ikon dan label putih yang menonjol.
-5. **State Interaktif yang Proper**: Seluruh daftar (Jelajah dan Library) kini menampilkan skeleton shimmer saat memuat data, bukan spinner mentah. Layar kosong menyajikan instruksi ramah dengan tombol reset filter atau panduan eksplorasi.
-6. **Hierarki Konten Detail Game**: Cover game dijadikan elemen visual dominan dengan overlay gradient scrim netral agar judul dan rating tetap terbaca dengan kontras sempurna di semua resolusi layar.
+1. **Hierarki Tipografi yang Lebih Tegas**: Jarak antarlevel display, title, body, dan label diperlebar melalui bobot, ukuran, dan line-height—bukan sekadar menebalkan semua teks.
+2. **Elevasi Berdasarkan Tone Steps**: Permukaan kartu memakai `surface` dan `surfaceElevated` tanpa border ramai; garis hanya dipakai saat benar-benar memisahkan kontrol.
+3. **Bentuk Pill Ergonomis**: Tombol utama, input pencarian, chip filter, dan indikator navigasi memakai radius penuh dengan area sentuh minimal 48dp.
+4. **Floating Dock Navigation Bar**: Bar navigasi 4 tab melayang di atas konten, dengan tab aktif ditandai pill lime `#C6F432` dan ikon/label hitam kontras tinggi.
+5. **State Interaktif yang Proper**: Daftar menampilkan skeleton shimmer saat memuat; layar kosong menyajikan instruksi ramah dengan tombol pemulihan; kartu dan tombol memberi umpan balik tekan.
+6. **Hierarki Konten Detail Game**: Cover game menjadi elemen visual dominan dengan scrim netral agar judul dan rating tetap terbaca di semua resolusi.
+7. **Aksesibilitas & Gerak**: Kontras teks mengikuti WCAG AA, target sentuh 48dp, layout aman pada text scale 1.3, dan seluruh animasi menghormati `MediaQuery.disableAnimations`.
 
 ---
 
@@ -441,7 +442,7 @@ flutter analyze
 flutter test
 flutter run
 ```
-*Hasil pengujian saat ini: `flutter analyze` 0 issues (bersih), dan `flutter test` 21 tests passed (100% lulus).*
+*Hasil pengujian saat ini: `flutter analyze` 0 issues (bersih), dan `flutter test` 45 tests passed (100% lulus).*
 
 ---
 
@@ -489,8 +490,8 @@ flutter run
 3. **Sinkronisasi Reaktif Tanpa Refresh Manual (`LibraryNotifier`)**:
    - Modifikasi library pada layar detail atau bottom sheet memicu `LibraryNotifier.instance.notifyUpdated()` / `notifyAdded()` / `notifyDeleted()`. Tab Library yang berada di dalam `IndexedStack` mendengarkan notifikasi ini dan secara otomatis memuat ulang koleksi tanpa memerlukan intervensi pengguna.
 4. **Penerapan Gaya Visual Anti-Slop (Skill `design-taste-frontend`)**:
-   - Status badge diberi kode warna fungsional yang tenang: Cyan untuk Wishlist, Indigo untuk Backlog, Amber untuk Sedang Dimainkan, Emerald Green untuk Tamat, dan Rose untuk Dropped.
-   - Kartu dirancang rata (*flat surfaces*), dibatasi garis 1px (`#2E2A48`), dengan hierarki tipografi kontras dan indikator data jujur (nilai kosong ditampilkan `-` atau indikasi ramah).
+   - Status badge memakai token fungsional terdesaturasi: *muted coral* untuk Sedang Dimainkan, *muted forest green* untuk Tamat, *muted stone beige* untuk Backlog, *muted warm amber* untuk Wishlist, dan *muted slate gray* untuk Dropped.
+   - Kartu dirancang rata (*flat surfaces*) dengan tone step `surface` (`#141416`) tanpa border ramai, hierarki tipografi kontras, dan indikator data jujur (nilai kosong ditampilkan `-` atau indikasi ramah).
 
 
 ---
@@ -642,7 +643,7 @@ Fitur Wishlist dengan Harga Target dan Pelacak Harga multi-toko kini telah diimp
   - Badge khusus `"Termurah di [Nama Toko]"` untuk penawaran terbaik.
 - **Grafik Garis Riwayat Harga (`LineChart` dari paket `fl_chart`)**:
   - Mengambil data dari endpoint `/api/games/{id}/prices`.
-  - Visualisasi garis halus (*curved line*) beraksen warna tema obsidian & coral terracotta dengan area gradien lembut.
+  - Visualisasi garis halus (*curved line*) beraksen lime (`#C6F432`) dengan area gradien lembut di atas kanvas hitam-putih.
   - Tooltip interaktif saat disentuh yang menampilkan nama toko, tanggal, dan nominal harga.
   - Penanganan batas riwayat:
     - Bila riwayat kosong: menampilkan keterangan `"Harga belum tersedia"`.
@@ -806,7 +807,7 @@ Fitur Notifikasi in-app penurunan harga, Statistik bermain interaktif berbasis g
 - **Ringkasan Metrik (`SummaryStatsRow`)**:
   - Menampilkan 3 kartu ringkasan: Total Game, Jam Bermain (akumulasi `jam_main`), dan Game Tamat (total game berstatus `Tamat`).
 - **Visualisasi Grafik `fl_chart`**:
-  - **Grafik Batang Game Tamat per 12 Bulan Terakhir (`MonthlyCompletedChart`)**: Visualisasi batang `BarChart` beraksen Coral Terracotta (`#E14B44`), label bulan singkat pada sumbu X, grid garis halus, dan tooltip interaktif saat disentuh yang menampilkan jumlah game tamat pada bulan terkait.
+  - **Grafik Batang Game Tamat per 12 Bulan Terakhir (`MonthlyCompletedChart`)**: Visualisasi batang `BarChart` beraksen lime (`#C6F432`), label bulan singkat pada sumbu X, grid garis halus, dan tooltip interaktif saat disentuh yang menampilkan jumlah game tamat pada bulan terkait.
   - **Grafik Donut/Lingkaran Genre Favorit (`FavoriteGenresChart`)**: Visualisasi `PieChart` untuk maksimal 5 genre teratas di library pengguna, dilengkapi persentase dan daftar legenda warna informatif.
 - **Tampilan Kosong yang Informatif**:
   - Pengguna tanpa data game/library melihat pesan informatif (*"Belum ada data. Tambahkan game ke library untuk melihat statistikmu."*), bukan galat atau grafik rusak.
@@ -828,7 +829,7 @@ Fitur Notifikasi in-app penurunan harga, Statistik bermain interaktif berbasis g
 
 ## 🧪 Hasil Pengujian Otomatis Mobile Terkini
 - **Flutter Analyzer**: `flutter analyze` -> **No issues found!** (0 error, 0 warning, 0 hint).
-- **Flutter Unit & Widget Tests**: `flutter test` -> **All 38 tests passed!** (100% lulus).
+- **Flutter Unit & Widget Tests**: `flutter test` -> **All 45 tests passed!** (100% lulus).
 
 ---
 
@@ -878,13 +879,13 @@ Penentuan maksimal 3 genre teratas dihitung melalui relasi pivot `game_genre` da
   - Termasuk 10 test komprehensif pada `tests/Feature/RecommendationTest.php` yang menguji bobot genre, isolasi kepemilikan data antar pengguna, pengecualian game yang sudah dimiliki, pengabaian status Dropped, penanganan empty state, proteksi 401, invalidasi cache reaktif, fallback kegagalan RAWG, dan pencegahan duplikasi game itu sendiri pada similar games.
 - **Mobile (Flutter Tests & Analysis)**:
   - `flutter analyze` -> **No issues found!** (0 error, 0 warning, 0 hint).
-  - `flutter test` -> **41 passed, 0 failed**.
+  - `flutter test` -> **45 passed, 0 failed**.
 
 ---
 
 ## 🎨 Redesain Warna: Hitam-Putih-Lime (60-30-10)
 
-Aplikasi **MainGa?** telah menerapkan redesain palet warna menyeluruh dengan aturan visual **60-30-10** berlandaskan prinsip *anti-slop* dari panduan desain UI berkelas (`design-taste-frontend`). Redesain ini merupakan perubahan **warna murni** tanpa mengubah struktur layout, ukuran, logika bisnis, endpoint, database, maupun susunan folder.
+Aplikasi **MainGa?** telah menerapkan palet warna **60-30-10** berlandaskan prinsip *anti-slop* dari panduan desain UI berkelas (`design-taste-frontend`). Palet ini tetap menjadi acuan warna resmi; pada **Pembaruan UI Modern**, fondasi tipografi, spasi, radius, gerak, dan komponen bersama ikut dirapikan tanpa mengubah alur bisnis, endpoint, database, maupun susunan folder.
 
 ### 📐 Aturan Distribusi 60-30-10
 - **60% Hitam (`#0B0B0C`)**: Warna dominan untuk latar belakang layar (*scaffold background*), permukaan kartu (*surface*), modal sheet, dialog, dan app bar.

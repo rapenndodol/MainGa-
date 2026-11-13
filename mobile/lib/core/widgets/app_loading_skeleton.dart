@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 /// Skeleton box tunggal dengan animasi pulse tone surface -> surfaceElevated.
+/// Menghormati preferensi reduce-motion pengguna.
 class AppSkeletonBox extends StatefulWidget {
   final double? width;
   final double height;
@@ -22,6 +23,7 @@ class _AppSkeletonBoxState extends State<AppSkeletonBox>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
+  bool _reduceMotion = false;
 
   @override
   void initState() {
@@ -29,11 +31,22 @@ class _AppSkeletonBoxState extends State<AppSkeletonBox>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1100),
-    )..repeat(reverse: true);
+    );
 
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (_reduceMotion) {
+      _controller.stop();
+    } else if (!_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    }
   }
 
   @override
@@ -47,6 +60,7 @@ class _AppSkeletonBoxState extends State<AppSkeletonBox>
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
+        final double t = _reduceMotion ? 0.35 : _animation.value;
         return Container(
           width: widget.width,
           height: widget.height,
@@ -54,10 +68,12 @@ class _AppSkeletonBoxState extends State<AppSkeletonBox>
             color: Color.lerp(
               AppColors.surface,
               AppColors.surfaceElevated,
-              _animation.value,
+              t,
             ),
             borderRadius: widget.borderRadius ?? AppRadius.smBorderRadius,
-            border: Border.all(color: AppColors.border.withValues(alpha: 0.4)),
+            border: Border.all(
+              color: AppColors.border.withValues(alpha: 0.25),
+            ),
           ),
         );
       },
@@ -77,15 +93,14 @@ class AppGameCardSkeleton extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: AppRadius.lgBorderRadius,
-        border: Border.all(color: AppColors.border, width: 1),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Cover skeleton
+          // Cover skeleton (3:4)
           AppSkeletonBox(
-            width: 80,
-            height: 110,
+            width: 84,
+            height: 112,
             borderRadius: AppRadius.mdBorderRadius,
           ),
           const SizedBox(width: AppSpacing.md),
@@ -94,19 +109,19 @@ class AppGameCardSkeleton extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 AppSkeletonBox(
                   width: double.infinity,
                   height: 16,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(AppRadius.control),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 AppSkeletonBox(
                   width: 140,
                   height: 14,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(AppRadius.control),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: AppSpacing.lg + AppSpacing.xxs),
                 Row(
                   children: [
                     AppSkeletonBox(
@@ -118,7 +133,7 @@ class AppGameCardSkeleton extends StatelessWidget {
                     AppSkeletonBox(
                       width: 44,
                       height: 14,
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(AppRadius.control),
                     ),
                   ],
                 ),
@@ -142,7 +157,10 @@ class AppListSkeleton extends StatelessWidget {
     return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
       itemCount: itemCount,
       itemBuilder: (_, _) => const AppGameCardSkeleton(),
     );

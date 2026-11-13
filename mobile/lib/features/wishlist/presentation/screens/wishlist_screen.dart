@@ -190,7 +190,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.textPrimary,
               shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBorderRadius),
             ),
             onPressed: () => Navigator.pop(ctx, true),
@@ -220,7 +220,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
         SnackBar(
           content: Text(
             res['message'] ?? 'Game berhasil dihapus dari wishlist',
-            style: AppTypography.bodySmall.copyWith(color: Colors.white),
+            style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary),
           ),
           backgroundColor: AppColors.surfaceElevated,
           behavior: SnackBarBehavior.floating,
@@ -354,7 +354,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
         _fetchWishlist(refresh: true);
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration: AppMotion.fast,
+        curve: AppMotion.curve,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : AppColors.surfaceElevated,
@@ -366,7 +367,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
         child: Text(
           label,
           style: AppTypography.labelSmall.copyWith(
-            color: isSelected ? Colors.white : AppColors.textSecondary,
+            color: isSelected ? AppColors.onPrimary : AppColors.textSecondary,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
           ),
         ),
@@ -447,12 +448,12 @@ class _WishlistScreenState extends State<WishlistScreen> {
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Icon(Icons.delete_outline_rounded, color: Colors.white, size: 24),
+                Icon(Icons.delete_outline_rounded, color: AppColors.textPrimary, size: 24),
                 SizedBox(width: 8),
                 Text(
                   'Hapus',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

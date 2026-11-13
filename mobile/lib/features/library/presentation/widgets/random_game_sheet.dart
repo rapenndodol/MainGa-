@@ -19,7 +19,7 @@ class RandomGameSheet extends StatefulWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (ctx) => const RandomGameSheet(),
     );
   }
@@ -361,7 +361,7 @@ class _RandomGameSheetState extends State<RandomGameSheet> {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.transparent,
+                            AppColors.transparent,
                             AppColors.surface.withValues(alpha: 0.9),
                           ],
                         ),

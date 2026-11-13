@@ -807,7 +807,7 @@ class _RecommendationCard extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: Material(
-        color: Colors.transparent,
+        color: AppColors.transparent,
         child: InkWell(
           onTap: () {
             Navigator.push(
@@ -840,7 +840,7 @@ class _RecommendationCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.75),
+                        color: AppColors.black.withValues(alpha: 0.75),
                         borderRadius: AppRadius.fullBorderRadius,
                         border: Border.all(
                           color: AppColors.border.withValues(alpha: 0.5),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 /// App Bar / Header bersama untuk seluruh layar.
+/// Tinggi toolbar memberi ruang aman hingga text scale 1.3.
 class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final String? subtitle;
@@ -18,17 +19,23 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     this.automaticallyImplyLeading = true,
   });
 
+  double get _toolbarHeight => subtitle != null ? 76.0 : 60.0;
+
   @override
   Widget build(BuildContext context) {
     return AppBar(
       backgroundColor: AppColors.bg,
+      surfaceTintColor: AppColors.transparent,
+      shadowColor: AppColors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
+      toolbarHeight: _toolbarHeight,
+      titleSpacing: AppSpacing.lg,
       automaticallyImplyLeading: automaticallyImplyLeading,
       leading: leading ??
           (Navigator.canPop(context) && automaticallyImplyLeading
               ? Padding(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  padding: const EdgeInsets.all(AppSpacing.xs),
                   child: IconButton(
                     icon: const Icon(
                       Icons.arrow_back_ios_new_rounded,
@@ -45,15 +52,16 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         children: [
           Text(
             title,
-            style: AppTypography.titleLarge.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.titleLarge,
           ),
           if (subtitle != null) ...[
-            const SizedBox(height: 2),
+            const SizedBox(height: AppSpacing.xxs),
             Text(
               subtitle!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: AppTypography.bodySmall.copyWith(
                 color: AppColors.textSecondary,
               ),
@@ -66,5 +74,5 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => Size.fromHeight(subtitle != null ? 64.0 : 56.0);
+  Size get preferredSize => Size.fromHeight(_toolbarHeight);
 }
