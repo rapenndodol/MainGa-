@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_badge.dart';
 import '../../../../core/widgets/app_loading_skeleton.dart';
 import '../../../../core/widgets/app_rawg_attribution.dart';
+import '../../../../core/widgets/app_section_header.dart';
 import '../../../../core/widgets/app_status_chip.dart';
+import '../../../../core/widgets/game_hero_tag.dart';
 import '../../../library/data/models/library_entry_model.dart';
 import '../../../library/presentation/controllers/library_notifier.dart';
 import '../../../library/presentation/widgets/library_entry_sheet.dart';
@@ -33,6 +36,8 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
   bool _isDescriptionExpanded = false;
   List<GameModel> _similarGames = [];
   final _gameDataSource = GameRemoteDataSource();
+
+  String get _heroTag => widget.heroTag ?? gameCoverHeroTag(_game, 'detail');
 
   @override
   void initState() {
@@ -174,321 +179,104 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final List<String> genreValues = _game.genres.isNotEmpty
+        ? _game.genres
+        : _game.genre
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+    final List<String> platformValues = _game.platforms.isNotEmpty
+        ? _game.platforms
+        : _game.platform
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: CustomScrollView(
         slivers: [
-          // ── Sliver App Bar dengan Cover Imersif ──────────────
-          SliverAppBar(
-            expandedHeight: 290.0,
-            pinned: true,
-            backgroundColor: AppColors.bg,
-            elevation: 0,
-            leading: Padding(
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              child: CircleAvatar(
-                backgroundColor: AppColors.surfaceElevated.withValues(alpha: 0.8),
-                child: IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    color: AppColors.textPrimary,
-                    size: 18,
-                  ),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (_game.coverUrl != null && _game.coverUrl!.isNotEmpty)
-                    Image.network(
-                      _game.coverUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => _buildCoverFallback(),
-                    )
-                  else
-                    _buildCoverFallback(),
-
-                  // Scrim gradien netral agar title & tombol tetap kontras tinggi
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.black.withValues(alpha: 0.65),
-                          AppColors.transparent,
-                          AppColors.bg,
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        stops: const [0.0, 0.45, 1.0],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Konten Detail ────────────────────────────────────
+          _buildHeroAppBar(),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.md,
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                AppSpacing.xl,
+                AppSpacing.xl,
+                AppSpacing.xxl,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Judul Game
+                  // ── Judul & Metadata Utama ─────────────────────
                   Text(
                     _game.judul,
                     style: AppTypography.displayMedium.copyWith(
-                      fontWeight: FontWeight.bold,
-                      height: 1.2,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      height: 1.12,
+                      letterSpacing: -0.9,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-
-                  // Rating dan Tanggal Rilis Badges
-                  Row(
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      // Rating Card
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                          vertical: AppSpacing.xs + 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.ratingStar.withValues(alpha: 0.15),
-                          borderRadius: AppRadius.fullBorderRadius,
-                          border: Border.all(
-                            color: AppColors.ratingStar.withValues(alpha: 0.35),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.star_rounded,
-                              size: 16,
-                              color: AppColors.ratingStar,
-                            ),
-                            const SizedBox(width: AppSpacing.xs),
-                            Text(
-                              _game.rating.toStringAsFixed(1),
-                              style: AppTypography.labelMedium.copyWith(
-                                color: AppColors.ratingStar,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              ' / 5.0',
-                              style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-
-                      // Tanggal Rilis Badge
+                      AppBadge.rating(_game.rating),
                       if (_game.tanggalRilis != null &&
                           _game.tanggalRilis!.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
-                            vertical: AppSpacing.xs + 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceElevated,
-                            borderRadius: AppRadius.fullBorderRadius,
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.calendar_today_rounded,
-                                size: 13,
-                                color: AppColors.textSecondary,
-                              ),
-                              const SizedBox(width: AppSpacing.xs + 2),
-                              Text(
-                                _game.tanggalRilis!,
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                            ],
+                        AppBadge(
+                          label: _game.tanggalRilis!,
+                          icon: Icons.calendar_today_rounded,
+                          variant: AppBadgeVariant.neutral,
+                        ),
+                      if (_game.libraryStatus != null)
+                        AppBadge(
+                          label: _game.libraryStatus!,
+                          icon: Icons.bookmark_rounded,
+                          customColor: AppStatusHelper.getStatusColor(
+                            _game.libraryStatus!,
                           ),
                         ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xl),
 
-                  // ── Tombol Library & Wishlist (Berdampingan) ───────────
+                  // ── Aksi Library & Wishlist ────────────────────
                   _buildActionButtons(),
                   const SizedBox(height: AppSpacing.xxl),
 
-                  // ── Section: Genre ─────────────────────────────
-                  if (_game.genres.isNotEmpty || _game.genre.isNotEmpty) ...[
-                    Text(
-                      'Genre',
-                      style: AppTypography.titleSmall.copyWith(
-                        color: AppColors.textSecondary,
-                        letterSpacing: 0.2,
-                      ),
+                  // ── Genre & Platform ───────────────────────────
+                  if (genreValues.isNotEmpty) ...[
+                    _buildTagSection(
+                      title: 'Genre',
+                      values: genreValues,
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: (_game.genres.isNotEmpty
-                              ? _game.genres
-                              : _game.genre.split(',').map((e) => e.trim()))
-                          .map(
-                            (g) => Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: AppSpacing.xs + 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceElevated,
-                                borderRadius: AppRadius.fullBorderRadius,
-                                border: Border.all(color: AppColors.border),
-                              ),
-                              child: Text(
-                                g,
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          )
-                          .toList(),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                  if (platformValues.isNotEmpty) ...[
+                    _buildTagSection(
+                      title: 'Platform',
+                      values: platformValues,
+                      muted: true,
                     ),
-                    const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.xxl),
                   ],
 
-                  // ── Section: Platform ──────────────────────────
-                  if (_game.platforms.isNotEmpty ||
-                      _game.platform.isNotEmpty) ...[
-                    Text(
-                      'Platform',
-                      style: AppTypography.titleSmall.copyWith(
-                        color: AppColors.textSecondary,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: (_game.platforms.isNotEmpty
-                              ? _game.platforms
-                              : _game.platform.split(',').map((e) => e.trim()))
-                          .map(
-                            (p) => Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: AppSpacing.xs + 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceElevated,
-                                borderRadius: AppRadius.fullBorderRadius,
-                                border: Border.all(color: AppColors.border),
-                              ),
-                              child: Text(
-                                p,
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                  ],
-
-                  // ── Section: Deskripsi ─────────────────────────
-                  Text(
-                    'Tentang Game',
-                    style: AppTypography.titleMedium.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-
-                  if (_isLoadingDetail)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AppSkeletonBox(width: double.infinity, height: 14),
-                          SizedBox(height: 8),
-                          AppSkeletonBox(width: double.infinity, height: 14),
-                          SizedBox(height: 8),
-                          AppSkeletonBox(width: 220, height: 14),
-                        ],
-                      ),
-                    )
-                  else
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _game.deskripsi != null && _game.deskripsi!.isNotEmpty
-                              ? _game.deskripsi!
-                              : 'Deskripsi lengkap game ini belum tersedia.',
-                          maxLines: _isDescriptionExpanded ? null : 4,
-                          overflow: _isDescriptionExpanded
-                              ? TextOverflow.visible
-                              : TextOverflow.ellipsis,
-                          style: AppTypography.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
-                            height: 1.6,
-                          ),
-                        ),
-                        if (_game.deskripsi != null &&
-                            _game.deskripsi!.length > 200) ...[
-                          const SizedBox(height: AppSpacing.sm),
-                          GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _isDescriptionExpanded =
-                                    !_isDescriptionExpanded;
-                              });
-                            },
-                            child: Text(
-                              _isDescriptionExpanded
-                                  ? 'Sembunyikan'
-                                  : 'Baca selengkapnya',
-                              style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.bold,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-
+                  // ── Tentang Game ───────────────────────────────
+                  _buildAboutCard(),
                   const SizedBox(height: AppSpacing.xxl),
 
-                  // ── Section: Harga & Riwayat Harga (US-05) ─────
+                  // ── Harga & Riwayat Harga (US-05) ──────────────
                   PriceTrackerSection(
                     gameIdOrRawgId: _game.id > 0 ? _game.id : _game.rawgId,
                   ),
 
-                  // ── Section: Game Serupa (F-11) ────────────────
+                  // ── Game Serupa (F-11) ─────────────────────────
                   if (_similarGames.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.xxl),
                     _buildSimilarGamesSection(),
@@ -498,7 +286,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
 
                   // ── Atribusi RAWG dengan link aktif ────────────
                   const AppRawgAttribution(),
-                  const SizedBox(height: AppSpacing.xl),
+                  const SizedBox(height: AppSpacing.sm),
                 ],
               ),
             ),
@@ -508,159 +296,262 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
     );
   }
 
-  Widget _buildSimilarGamesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Game Serupa',
-          style: AppTypography.titleMedium.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
+  Widget _buildHeroAppBar() {
+    return SliverAppBar(
+      expandedHeight: 360,
+      pinned: true,
+      stretch: true,
+      backgroundColor: AppColors.bg,
+      surfaceTintColor: AppColors.transparent,
+      shadowColor: AppColors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      leadingWidth: 68,
+      leading: Padding(
+        padding: const EdgeInsets.only(
+          left: AppSpacing.md,
+          top: AppSpacing.xs,
+          bottom: AppSpacing.xs,
         ),
-        const SizedBox(height: AppSpacing.md),
-        SizedBox(
-          height: 180,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: _similarGames.length,
-            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
-            itemBuilder: (context, index) {
-              final simGame = _similarGames[index];
-              return Container(
-                width: 140,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: AppRadius.mdBorderRadius,
-                  border: Border.all(color: AppColors.border, width: 1),
+        child: _RoundIconButton(
+          icon: Icons.arrow_back_rounded,
+          tooltip: 'Kembali',
+          onTap: () => Navigator.pop(context),
+        ),
+      ),
+      flexibleSpace: FlexibleSpaceBar(
+        collapseMode: CollapseMode.parallax,
+        stretchModes: const [StretchMode.zoomBackground],
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            Hero(
+              tag: _heroTag,
+              child: _buildCoverImage(),
+            ),
+            // Scrim atas agar tombol kembali selalu terbaca.
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.black.withValues(alpha: 0.7),
+                    AppColors.black.withValues(alpha: 0.15),
+                    AppColors.transparent,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0.0, 0.24, 0.46],
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: Material(
-                  color: AppColors.transparent,
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => GameDetailScreen(game: simGame),
-                        ),
-                      );
-                    },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Cover & Rating
-                        Stack(
-                          children: [
-                            SizedBox(
-                              width: 140,
-                              height: 95,
-                              child: simGame.coverUrl != null &&
-                                      simGame.coverUrl!.isNotEmpty
-                                  ? Image.network(
-                                      simGame.coverUrl!,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, _, _) =>
-                                          _buildCoverFallback(),
-                                    )
-                                  : _buildCoverFallback(),
-                            ),
-                            Positioned(
-                              top: 6,
-                              right: 6,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.black.withValues(alpha: 0.75),
-                                  borderRadius: AppRadius.fullBorderRadius,
-                                  border: Border.all(
-                                    color: AppColors.border.withValues(alpha: 0.5),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.star_rounded,
-                                      size: 12,
-                                      color: AppColors.ratingStar,
-                                    ),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      simGame.rating.toStringAsFixed(1),
-                                      style: const TextStyle(
-                                        color: AppColors.ratingStar,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // Title & Genre
-                        Padding(
-                          padding: const EdgeInsets.all(AppSpacing.sm),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                simGame.judul,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.bodyMedium.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              if (simGame.genre.isNotEmpty)
-                                Text(
-                                  simGame.genre,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTypography.labelSmall.copyWith(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
+              ),
+            ),
+            // Scrim bawah menyatu dengan latar konten.
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.transparent,
+                    AppColors.bg.withValues(alpha: 0.72),
+                    AppColors.bg,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0.42, 0.82, 1.0],
+                ),
+              ),
+            ),
+            Positioned(
+              left: AppSpacing.xl,
+              right: AppSpacing.xl,
+              bottom: AppSpacing.xl,
+              child: Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
                     ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    'DETAIL GAME',
+                    style: AppTypography.overline.copyWith(
+                      color: AppColors.textPrimary,
+                      letterSpacing: 1.6,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCoverImage() {
+    final String? coverUrl = _game.coverUrl;
+    if (coverUrl == null || coverUrl.isEmpty) {
+      return _buildCoverFallback();
+    }
+
+    return Image.network(
+      coverUrl,
+      fit: BoxFit.cover,
+      cacheWidth: 900,
+      filterQuality: FilterQuality.medium,
+      errorBuilder: (_, _, _) => _buildCoverFallback(),
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return _buildCoverFallback();
+      },
+    );
+  }
+
+  Widget _buildTagSection({
+    required String title,
+    required List<String> values,
+    bool muted = false,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.cardBorderRadius,
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppSectionHeader(title: title),
+          const SizedBox(height: AppSpacing.md),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: values.map((value) {
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.xs + 2,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated,
+                  borderRadius: AppRadius.fullBorderRadius,
+                  border: Border.all(
+                    color: AppColors.border.withValues(alpha: 0.9),
+                  ),
+                ),
+                child: Text(
+                  value,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: muted
+                        ? AppColors.textSecondary
+                        : AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               );
-            },
+            }).toList(),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAboutCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.cardBorderRadius,
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AppSectionHeader(title: 'Tentang Game'),
+          const SizedBox(height: AppSpacing.md),
+          if (_isLoadingDetail)
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppSkeletonBox(width: double.infinity, height: 13),
+                SizedBox(height: AppSpacing.sm),
+                AppSkeletonBox(width: double.infinity, height: 13),
+                SizedBox(height: AppSpacing.sm),
+                AppSkeletonBox(width: 220, height: 13),
+              ],
+            )
+          else ...[
+            Text(
+              _game.deskripsi != null && _game.deskripsi!.isNotEmpty
+                  ? _game.deskripsi!
+                  : 'Deskripsi lengkap game ini belum tersedia.',
+              maxLines: _isDescriptionExpanded ? null : 4,
+              overflow: _isDescriptionExpanded
+                  ? TextOverflow.visible
+                  : TextOverflow.ellipsis,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.65,
+              ),
+            ),
+            if (_game.deskripsi != null && _game.deskripsi!.length > 200) ...[
+              const SizedBox(height: AppSpacing.xs),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _isDescriptionExpanded = !_isDescriptionExpanded;
+                  });
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(48, 48),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  textStyle: AppTypography.labelMedium.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _isDescriptionExpanded
+                          ? 'Sembunyikan'
+                          : 'Baca selengkapnya',
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Icon(
+                      _isDescriptionExpanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      size: 18,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
     );
   }
 
   Widget _buildActionButtons() {
-    return Row(
-      children: [
-        // ── Tombol / Status Library ───────────────────────────
-        Expanded(
-          child: _buildLibraryActionButton(),
-        ),
-        const SizedBox(width: AppSpacing.md),
-
-        // ── Tombol / Status Wishlist ──────────────────────────
-        Expanded(
-          child: _buildWishlistActionButton(),
-        ),
-      ],
+    return SizedBox(
+      height: 56,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: _buildLibraryActionButton()),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(child: _buildWishlistActionButton()),
+        ],
+      ),
     );
   }
 
@@ -668,86 +559,74 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
     final status = _game.libraryStatus;
 
     if (status == null) {
-      // Belum ada di library: Tombol primer
-      return Container(
-        height: 52,
-        decoration: BoxDecoration(
-          color: AppColors.primary,
-          borderRadius: AppRadius.lgBorderRadius,
-        ),
-        child: Material(
-          color: AppColors.transparent,
-          child: InkWell(
-            borderRadius: AppRadius.lgBorderRadius,
-            onTap: _openLibraryForm,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.bookmark_add_outlined,
-                    size: 18,
-                    color: AppColors.textPrimary,
-                  ),
-                  SizedBox(width: AppSpacing.xs + 2),
-                  Flexible(
-                    child: Text(
-                      'Ke Library',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
+      return Material(
+        color: AppColors.primary,
+        borderRadius: AppRadius.lgBorderRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: _openLibraryForm,
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.bookmark_add_outlined,
+                  size: 18,
+                  color: AppColors.onPrimary,
+                ),
+                SizedBox(width: AppSpacing.xs + 2),
+                Flexible(
+                  child: Text(
+                    'Ke Library',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.onPrimary,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
       );
     }
 
-    // Sudah ada di library: kartu status interaktif
     final Color statusColor = AppStatusHelper.getStatusColor(status);
 
-    return Container(
-      height: 52,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    return Material(
+      color: AppColors.surface,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
         borderRadius: AppRadius.lgBorderRadius,
-        border: Border.all(
+        side: BorderSide(
           color: statusColor.withValues(alpha: 0.4),
           width: 1.2,
         ),
       ),
-      child: Material(
-        color: AppColors.transparent,
-        child: InkWell(
-          borderRadius: AppRadius.lgBorderRadius,
-          onTap: _openLibraryForm,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AppStatusChip(status: status, compact: true),
-                    ],
-                  ),
+      child: InkWell(
+        onTap: _openLibraryForm,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: Row(
+            children: [
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: AppStatusChip(status: status, compact: true),
                 ),
-                const Icon(
-                  Icons.edit_outlined,
-                  size: 15,
-                  color: AppColors.primaryLight,
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Icon(
+                Icons.edit_outlined,
+                size: 15,
+                color: statusColor,
+              ),
+            ],
           ),
         ),
       ),
@@ -756,128 +635,149 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
 
   Widget _buildWishlistActionButton() {
     if (!_game.inWishlist) {
-      // Belum ada di wishlist: Tombol "Tambah ke Wishlist"
-      return Container(
-        height: 52,
-        decoration: BoxDecoration(
-          color: AppColors.primaryContainer.withValues(alpha: 0.6),
+      return Material(
+        color: AppColors.primaryContainer,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
           borderRadius: AppRadius.lgBorderRadius,
-          border: Border.all(
+          side: BorderSide(
             color: AppColors.primary.withValues(alpha: 0.5),
             width: 1.2,
           ),
         ),
-        child: Material(
-          color: AppColors.transparent,
-          child: InkWell(
-            borderRadius: AppRadius.lgBorderRadius,
-            onTap: _openWishlistForm,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.favorite_border_rounded,
-                    size: 18,
-                    color: AppColors.primaryLight,
-                  ),
-                  SizedBox(width: AppSpacing.xs + 2),
-                  Flexible(
-                    child: Text(
-                      'Tambah ke Wishlist',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryLight,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    // Sudah ada di wishlist: Kartu target harga & status aktif
-    final double? target = _game.wishlistHargaTarget;
-    final bool isAktif = _game.isWishlistActive;
-
-    return Container(
-      height: 52,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.lgBorderRadius,
-        border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.4),
-          width: 1.2,
-        ),
-      ),
-      child: Material(
-        color: AppColors.transparent,
         child: InkWell(
-          borderRadius: AppRadius.lgBorderRadius,
           onTap: _openWishlistForm,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  Icons.favorite_rounded,
+                  Icons.favorite_border_rounded,
                   size: 18,
-                  color: isAktif ? AppColors.primary : AppColors.textMuted,
+                  color: AppColors.primaryLight,
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Wishlist',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        target != null
-                            ? 'Target: \$${target.toStringAsFixed(2)}'
-                            : (isAktif ? 'Aktif' : 'Nonaktif'),
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textMuted,
-                          fontSize: 10,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceElevated,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: const Icon(
-                    Icons.edit_outlined,
-                    size: 16,
-                    color: AppColors.textPrimary,
+                SizedBox(width: AppSpacing.xs + 2),
+                Flexible(
+                  child: Text(
+                    'Tambah ke Wishlist',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primaryLight,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
         ),
+      );
+    }
+
+    final double? target = _game.wishlistHargaTarget;
+    final bool isAktif = _game.isWishlistActive;
+
+    return Material(
+      color: AppColors.surface,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.lgBorderRadius,
+        side: BorderSide(
+          color: AppColors.primary.withValues(alpha: 0.35),
+          width: 1.2,
+        ),
       ),
+      child: InkWell(
+        onTap: _openWishlistForm,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: Row(
+            children: [
+              Icon(
+                Icons.favorite_rounded,
+                size: 18,
+                color: isAktif ? AppColors.primary : AppColors.textMuted,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Wishlist',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      target != null
+                          ? 'Target: \$${target.toStringAsFixed(2)}'
+                          : (isAktif ? 'Aktif' : 'Nonaktif'),
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 10,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: const Icon(
+                  Icons.edit_outlined,
+                  size: 14,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSimilarGamesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppSectionHeader(
+          title: 'Game Serupa',
+          trailing: Text(
+            '${_similarGames.length} game',
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.textMuted,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        SizedBox(
+          height: 226,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
+            itemCount: _similarGames.length,
+            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
+            itemBuilder: (context, index) {
+              return _SimilarGameCard(game: _similarGames[index]);
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -888,7 +788,174 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
         child: Icon(
           Icons.sports_esports_rounded,
           color: AppColors.textMuted,
-          size: 64,
+          size: 56,
+        ),
+      ),
+    );
+  }
+}
+
+/// Kartu game serupa dengan cover poster dan judul ringkas.
+class _SimilarGameCard extends StatelessWidget {
+  final GameModel game;
+
+  const _SimilarGameCard({required this.game});
+
+  String get _heroTag => gameCoverHeroTag(game, 'serupa');
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 142,
+      child: Material(
+        color: AppColors.surface,
+        borderRadius: AppRadius.cardBorderRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => GameDetailScreen(
+                  game: game,
+                  heroTag: _heroTag,
+                ),
+              ),
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: 172,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Hero(
+                      tag: _heroTag,
+                      child: _buildCover(),
+                    ),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.black.withValues(alpha: 0.3),
+                            AppColors.transparent,
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          stops: const [0.0, 0.45],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: AppSpacing.sm,
+                      right: AppSpacing.sm,
+                      child: AppBadge.rating(game.rating, compact: true),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      game.judul,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      game.genre.isNotEmpty ? game.genre : 'Game serupa',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCover() {
+    final String? coverUrl = game.coverUrl;
+    if (coverUrl == null || coverUrl.isEmpty) {
+      return _buildFallback();
+    }
+
+    return Image.network(
+      coverUrl,
+      fit: BoxFit.cover,
+      cacheWidth: 360,
+      filterQuality: FilterQuality.medium,
+      errorBuilder: (_, _, _) => _buildFallback(),
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return _buildFallback();
+      },
+    );
+  }
+
+  Widget _buildFallback() {
+    return Container(
+      color: AppColors.surfaceElevated,
+      child: const Center(
+        child: Icon(
+          Icons.sports_esports_rounded,
+          color: AppColors.textMuted,
+          size: 28,
+        ),
+      ),
+    );
+  }
+}
+
+/// Tombol ikon bulat dengan area sentuh 48dp untuk app bar imersif.
+class _RoundIconButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  const _RoundIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: AppColors.black.withValues(alpha: 0.45),
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Icon(
+              icon,
+              color: AppColors.textPrimary,
+              size: 20,
+            ),
+          ),
         ),
       ),
     );
