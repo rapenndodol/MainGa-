@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_badge.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_error_state.dart';
 import '../../../../core/widgets/app_game_card.dart';
 import '../../../../core/widgets/app_loading_skeleton.dart';
 import '../../../../core/widgets/app_rawg_attribution.dart';
+import '../../../../core/widgets/app_section_header.dart';
+import '../../../../core/widgets/game_hero_tag.dart';
 import '../../../library/presentation/controllers/library_notifier.dart';
 import '../../data/datasources/game_remote_data_source.dart';
 import '../../data/models/game_model.dart';
@@ -33,6 +36,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   String _selectedGenre = 'Semua';
   String _selectedPlatform = 'Semua';
+  String _searchQuery = '';
   double _minRating = 0.0;
 
   int _currentPage = 1;
@@ -182,10 +186,17 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   void _onSearchChanged(String query) {
+    setState(() => _searchQuery = query);
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
       _fetchGames(resetPage: true);
     });
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() => _searchQuery = '');
+    _fetchGames(resetPage: true);
   }
 
   void _showFilterModal() {
@@ -194,184 +205,230 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surfaceElevated,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
+      useSafeArea: true,
+      barrierColor: AppColors.black.withValues(alpha: 0.65),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
-        side: BorderSide(color: AppColors.border),
+        borderRadius: AppRadius.sheetTopBorderRadius,
       ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: AppSpacing.xl,
-                right: AppSpacing.xl,
-                top: AppSpacing.xl,
-                bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.xxl,
+            final double bottomInset =
+                MediaQuery.of(context).viewInsets.bottom;
+
+            return Container(
+              decoration: BoxDecoration(
+                color: AppColors.surfaceElevated,
+                borderRadius: AppRadius.sheetTopBorderRadius,
+                border: Border.all(
+                  color: AppColors.border.withValues(alpha: 0.8),
+                ),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 36,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.textMuted.withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(2),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.sm,
+                  AppSpacing.xl,
+                  bottomInset + AppSpacing.xxl,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.textMuted.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
+                    const SizedBox(height: AppSpacing.xl),
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Filter Pencarian',
-                        style: AppTypography.titleLarge,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Filter Pencarian',
+                                style: AppTypography.titleLarge,
+                              ),
+                              const SizedBox(height: AppSpacing.xxs),
+                              Text(
+                                'Persempit katalog sesuai selera.',
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setModalState(() {
+                              tempPlatform = 'Semua';
+                              tempRating = 0.0;
+                            });
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.textSecondary,
+                            minimumSize: const Size(48, 48),
+                          ),
+                          child: const Text('Reset'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const Divider(color: AppColors.border),
+                    const SizedBox(height: AppSpacing.xl),
+
+                    Text(
+                      'Platform',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w700,
                       ),
-                      TextButton(
-                        onPressed: () {
-                          setModalState(() {
-                            tempPlatform = 'Semua';
-                            tempRating = 0.0;
-                          });
-                        },
-                        child: Text(
-                          'Reset',
-                          style: AppTypography.labelMedium.copyWith(
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.inputBackground,
+                        borderRadius: AppRadius.controlLargeBorderRadius,
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: tempPlatform,
+                          dropdownColor: AppColors.surfaceElevated,
+                          borderRadius: AppRadius.mdBorderRadius,
+                          isExpanded: true,
+                          isDense: true,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.md,
+                          ),
+                          icon: const Icon(
+                            Icons.keyboard_arrow_down_rounded,
                             color: AppColors.textSecondary,
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  const Divider(color: AppColors.border),
-                  const SizedBox(height: AppSpacing.lg),
-
-                  Text(
-                    'Platform',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                    decoration: BoxDecoration(
-                      color: AppColors.inputBackground,
-                      borderRadius: AppRadius.lgBorderRadius,
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: tempPlatform,
-                        dropdownColor: AppColors.surfaceElevated,
-                        isExpanded: true,
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textPrimary,
-                        ),
-                        items: [
-                          const DropdownMenuItem(
-                            value: 'Semua',
-                            child: Text('Semua Platform'),
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.textPrimary,
                           ),
-                          ..._platforms.map(
-                            (p) => DropdownMenuItem(
-                              value: p.nama,
-                              child: Text(p.nama),
+                          items: [
+                            const DropdownMenuItem(
+                              value: 'Semua',
+                              child: Text('Semua Platform'),
                             ),
-                          ),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            setModalState(() => tempPlatform = val);
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Rating Minimum',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm + 2,
-                          vertical: AppSpacing.xs,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.ratingStar.withValues(alpha: 0.15),
-                          borderRadius: AppRadius.fullBorderRadius,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.star_rounded,
-                              size: 14,
-                              color: AppColors.ratingStar,
-                            ),
-                            const SizedBox(width: AppSpacing.xs),
-                            Text(
-                              tempRating > 0
-                                  ? tempRating.toStringAsFixed(1)
-                                  : 'Semua',
-                              style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.ratingStar,
-                                fontWeight: FontWeight.bold,
+                            ..._platforms.map(
+                              (p) => DropdownMenuItem(
+                                value: p.nama,
+                                child: Text(p.nama),
                               ),
                             ),
                           ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              setModalState(() => tempPlatform = val);
+                            }
+                          },
                         ),
                       ),
-                    ],
-                  ),
-                  SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      activeTrackColor: AppColors.primary,
-                      inactiveTrackColor: AppColors.border,
-                      thumbColor: AppColors.primary,
-                      overlayColor: AppColors.primary.withValues(alpha: 0.2),
                     ),
-                    child: Slider(
-                      value: tempRating,
-                      min: 0.0,
-                      max: 4.5,
-                      divisions: 9,
-                      label: tempRating > 0 ? tempRating.toStringAsFixed(1) : 'Semua',
-                      onChanged: (v) {
-                        setModalState(() => tempRating = v);
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
+                    const SizedBox(height: AppSpacing.xl),
 
-                  AppButton(
-                    text: 'Terapkan Filter',
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      setState(() {
-                        _selectedPlatform = tempPlatform;
-                        _minRating = tempRating;
-                      });
-                      _fetchGames(resetPage: true);
-                    },
-                    variant: AppButtonVariant.primary,
-                    height: 50,
-                  ),
-                ],
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Rating Minimum',
+                          style: AppTypography.labelMedium.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm + 2,
+                            vertical: AppSpacing.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.ratingStar.withValues(alpha: 0.15),
+                            borderRadius: AppRadius.fullBorderRadius,
+                            border: Border.all(
+                              color:
+                                  AppColors.ratingStar.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.star_rounded,
+                                size: 14,
+                                color: AppColors.ratingStar,
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              Text(
+                                tempRating > 0
+                                    ? tempRating.toStringAsFixed(1)
+                                    : 'Semua',
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.ratingStar,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        activeTrackColor: AppColors.primary,
+                        inactiveTrackColor: AppColors.border,
+                        thumbColor: AppColors.primary,
+                        overlayColor: AppColors.primary.withValues(alpha: 0.2),
+                      ),
+                      child: Slider(
+                        value: tempRating,
+                        min: 0.0,
+                        max: 4.5,
+                        divisions: 9,
+                        label: tempRating > 0
+                            ? tempRating.toStringAsFixed(1)
+                            : 'Semua',
+                        onChanged: (v) {
+                          setModalState(() => tempRating = v);
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    AppButton(
+                      text: 'Terapkan Filter',
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        setState(() {
+                          _selectedPlatform = tempPlatform;
+                          _minRating = tempRating;
+                        });
+                        _fetchGames(resetPage: true);
+                      },
+                      variant: AppButtonVariant.primary,
+                      icon: Icons.tune_rounded,
+                      height: 52,
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -386,182 +443,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        title: Text(
-          'Jelajah Game',
-          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: false,
-        automaticallyImplyLeading: false,
-        backgroundColor: AppColors.bg,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-      ),
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
-            // ── Search Bar & Filter Button ────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.sm,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: _onSearchChanged,
-                      textInputAction: TextInputAction.search,
-                      onSubmitted: (_) => _fetchGames(resetPage: true),
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.textPrimary,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Cari judul game...',
-                        hintStyle: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textMuted,
-                        ),
-                        prefixIcon: const Icon(
-                          Icons.search_rounded,
-                          color: AppColors.textMuted,
-                          size: 20,
-                        ),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(
-                                  Icons.clear_rounded,
-                                  color: AppColors.textMuted,
-                                  size: 18,
-                                ),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  _fetchGames(resetPage: true);
-                                },
-                              )
-                            : null,
-                        filled: true,
-                        fillColor: AppColors.inputBackground,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                          vertical: AppSpacing.md,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: AppRadius.fullBorderRadius,
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: AppRadius.fullBorderRadius,
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: AppRadius.fullBorderRadius,
-                          borderSide: const BorderSide(
-                            color: AppColors.borderFocused,
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm + 2),
-
-                  Stack(
-                    children: [
-                      Container(
-                        height: 48,
-                        width: 48,
-                        decoration: BoxDecoration(
-                          color: hasActiveFilters
-                              ? AppColors.surfaceHighlight
-                              : AppColors.surfaceElevated,
-                          borderRadius: AppRadius.fullBorderRadius,
-                          border: Border.all(
-                            color: hasActiveFilters
-                                ? AppColors.primary
-                                : AppColors.border,
-                            width: 1.2,
-                          ),
-                        ),
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.tune_rounded,
-                            color: hasActiveFilters
-                                ? AppColors.textPrimary
-                                : AppColors.textSecondary,
-                            size: 20,
-                          ),
-                          onPressed: _showFilterModal,
-                          tooltip: 'Filter Platform & Rating',
-                        ),
-                      ),
-                      if (hasActiveFilters)
-                        Positioned(
-                          right: 10,
-                          top: 10,
-                          child: Container(
-                            width: 7,
-                            height: 7,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Horizontal Chip Filter Genre ──────────────────
-            SizedBox(
-              height: 42,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                itemCount: _genres.length + 1,
-                separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-                itemBuilder: (context, index) {
-                  final String genreName =
-                      index == 0 ? 'Semua' : _genres[index - 1].nama;
-                  final bool isSelected = _selectedGenre == genreName;
-
-                  return Center(
-                    child: ChoiceChip(
-                      label: Text(genreName),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        if (selected) {
-                          setState(() {
-                            _selectedGenre = genreName;
-                          });
-                          _fetchGames(resetPage: true);
-                        }
-                      },
-                      selectedColor: AppColors.white,
-                      backgroundColor: AppColors.surfaceElevated,
-                      labelStyle: AppTypography.labelSmall.copyWith(
-                        color: isSelected ? AppColors.onPrimary : AppColors.textSecondary,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.w500,
-                      ),
-                      side: BorderSide(
-                        color: isSelected ? AppColors.white : AppColors.border,
-                        width: 1,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppRadius.fullBorderRadius,
-                      ),
-                      showCheckmark: false,
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-
-            // ── Daftar Game / Status View ─────────────────────
+            _buildHeader(hasActiveFilters),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _onRefresh,
@@ -576,9 +462,250 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
+  Widget _buildHeader(bool hasActiveFilters) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.xl,
+        0,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Jelajah Game',
+                      style: AppTypography.displayMedium.copyWith(
+                        fontSize: 30,
+                        letterSpacing: -0.9,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xxs + 1),
+                    Text(
+                      'Temukan judul berikutnya untuk koleksimu.',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryContainer,
+                  borderRadius: AppRadius.controlLargeBorderRadius,
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (_) => _fetchGames(resetPage: true),
+                  keyboardAppearance: Brightness.dark,
+                  cursorColor: AppColors.primary,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: 14.5,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Cari judul game...',
+                    hintStyle: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textMuted,
+                      fontSize: 14.5,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.textMuted,
+                      size: 20,
+                    ),
+                    prefixIconConstraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            tooltip: 'Hapus pencarian',
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              color: AppColors.textMuted,
+                              size: 18,
+                            ),
+                            onPressed: _clearSearch,
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: AppColors.surface,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.md + 2,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: AppRadius.lgBorderRadius,
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: AppRadius.lgBorderRadius,
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: AppRadius.lgBorderRadius,
+                      borderSide: const BorderSide(
+                        color: AppColors.borderFocused,
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm + 2),
+              Stack(
+                children: [
+                  Container(
+                    height: 50,
+                    width: 50,
+                    decoration: BoxDecoration(
+                      color: hasActiveFilters
+                          ? AppColors.surfaceHighlight
+                          : AppColors.surface,
+                      borderRadius: AppRadius.lgBorderRadius,
+                      border: Border.all(
+                        color: hasActiveFilters
+                            ? AppColors.primary
+                            : AppColors.border,
+                        width: hasActiveFilters ? 1.4 : 1,
+                      ),
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.tune_rounded,
+                        color: hasActiveFilters
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                        size: 20,
+                      ),
+                      onPressed: _showFilterModal,
+                      tooltip: 'Filter Platform & Rating',
+                    ),
+                  ),
+                  if (hasActiveFilters)
+                    Positioned(
+                      right: 11,
+                      top: 11,
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          SizedBox(
+            height: 48,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.zero,
+              itemCount: _genres.length + 1,
+              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+              itemBuilder: (context, index) {
+                final String genreName =
+                    index == 0 ? 'Semua' : _genres[index - 1].nama;
+                final bool isSelected = _selectedGenre == genreName;
+
+                return Center(
+                  child: ChoiceChip(
+                    label: Text(genreName),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() => _selectedGenre = genreName);
+                        _fetchGames(resetPage: true);
+                      }
+                    },
+                    selectedColor: AppColors.white,
+                    backgroundColor: AppColors.surface,
+                    labelStyle: AppTypography.labelSmall.copyWith(
+                      color: isSelected
+                          ? AppColors.onSecondary
+                          : AppColors.textSecondary,
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                    labelPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xs,
+                      vertical: AppSpacing.xs,
+                    ),
+                    side: BorderSide(
+                      color: isSelected ? AppColors.white : AppColors.border,
+                      width: 1,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.fullBorderRadius,
+                    ),
+                    showCheckmark: false,
+                    materialTapTargetSize: MaterialTapTargetSize.padded,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Container(
+            height: 1,
+            color: AppColors.border.withValues(alpha: 0.55),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBody() {
     if (_isLoadingInitial) {
-      return const AppListSkeleton(itemCount: 6);
+      return const AppListSkeleton(
+        itemCount: 6,
+        surfaced: false,
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.md,
+          AppSpacing.md,
+          96.0,
+        ),
+      );
     }
 
     if (_errorMessage != null) {
@@ -604,6 +731,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         onAction: () {
           _searchController.clear();
           setState(() {
+            _searchQuery = '';
             _selectedGenre = 'Semua';
             _selectedPlatform = 'Semua';
             _minRating = 0.0;
@@ -619,15 +747,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final bool showRecommendations = !isSearching && !hasActiveFilters;
 
     final int headerOffset = showRecommendations ? 1 : 0;
-    final int totalItems = _games.length + headerOffset + 1; // +1 untuk footer loading atau atribusi
+    final int totalItems = _games.length + headerOffset + 1; // +1 untuk footer
 
     return ListView.builder(
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
+        AppSpacing.md,
         AppSpacing.xs,
-        AppSpacing.lg,
+        AppSpacing.md,
         96.0,
       ),
       itemCount: totalItems,
@@ -638,23 +767,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
         final int gameIndex = index - headerOffset;
         if (gameIndex < _games.length) {
-          return AppGameCard(game: _games[gameIndex]);
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
+            child: AppGameCard(
+              game: _games[gameIndex],
+              index: gameIndex,
+              heroScope: 'katalog',
+            ),
+          );
         }
 
         if (_isLoadingMore) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-            child: Center(
-              child: SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                ),
-              ),
-            ),
-          );
+          return const _ListFooterLoading();
         }
 
         return const AppRawgAttribution();
@@ -662,259 +786,383 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  /// Bagian "Rekomendasi untuk kamu" berupa daftar horizontal
+  /// Bagian "Rekomendasi untuk kamu" berupa carousel dengan penanda halaman.
   Widget _buildRecommendationsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(
-            top: AppSpacing.xs,
-            bottom: AppSpacing.sm,
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.sm,
+            AppSpacing.xs,
+            AppSpacing.sm,
+            AppSpacing.md,
           ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.auto_awesome_rounded,
-                size: 16,
-                color: AppColors.primary,
-              ),
-              const SizedBox(width: AppSpacing.xs + 2),
-              Text(
-                'Rekomendasi untuk kamu',
-                style: AppTypography.titleMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const Spacer(),
-              if (_isLoadingRecommendations)
-                const SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                  ),
-                ),
-            ],
+          child: AppSectionHeader(
+            title: 'Rekomendasi untuk kamu',
+            trailing: _isLoadingRecommendations
+                ? const Padding(
+                    padding: EdgeInsets.only(left: AppSpacing.sm),
+                    child: SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(AppColors.primary),
+                      ),
+                    ),
+                  )
+                : null,
           ),
         ),
         if (_isLoadingRecommendations && _recommendations.isEmpty)
-          SizedBox(
-            height: 195,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: 3,
-              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
-              itemBuilder: (_, _) => Container(
-                width: 155,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: AppRadius.mdBorderRadius,
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppSkeletonBox(width: 155, height: 105),
-                    Padding(
-                      padding: EdgeInsets.all(AppSpacing.sm),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AppSkeletonBox(width: 110, height: 12),
-                          SizedBox(height: 6),
-                          AppSkeletonBox(width: 75, height: 10),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+          const AppRecommendationSkeleton(height: 208)
+        else if (_recommendations.isEmpty)
+          _buildRecommendationsEmpty()
+        else
+          _RecommendationCarousel(games: _recommendations),
+        const SizedBox(height: AppSpacing.xxl),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          child: AppSectionHeader(
+            title: 'Katalog Game',
+            trailing: Text(
+              '${_games.length} judul',
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textMuted,
               ),
             ),
-          )
-        else if (_recommendations.isEmpty)
-          Container(
-            margin: const EdgeInsets.only(bottom: AppSpacing.md),
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: AppRadius.mdBorderRadius,
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.sports_esports_outlined,
-                  size: 20,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Text(
-                    'Tambahkan game ke library untuk mendapat rekomendasi',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          SizedBox(
-            height: 195,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _recommendations.length,
-              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
-              itemBuilder: (context, index) {
-                return _RecommendationCard(game: _recommendations[index]);
-              },
-            ),
-          ),
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          'Katalog Game',
-          style: AppTypography.titleMedium.copyWith(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-            color: AppColors.textPrimary,
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.xs),
+      ],
+    );
+  }
+
+  Widget _buildRecommendationsEmpty() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.cardBorderRadius,
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.primaryContainer,
+              borderRadius: AppRadius.controlLargeBorderRadius,
+            ),
+            child: const Icon(
+              Icons.sports_esports_outlined,
+              size: 20,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              'Tambahkan game ke library untuk mendapat rekomendasi',
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ListFooterLoading extends StatelessWidget {
+  const _ListFooterLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm + 2),
+          Text(
+            'Memuat game lainnya',
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Carousel rekomendasi dengan kartu poster penuh dan indikator titik.
+class _RecommendationCarousel extends StatefulWidget {
+  final List<GameModel> games;
+
+  const _RecommendationCarousel({required this.games});
+
+  @override
+  State<_RecommendationCarousel> createState() =>
+      _RecommendationCarouselState();
+}
+
+class _RecommendationCarouselState extends State<_RecommendationCarousel> {
+  late final PageController _controller;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PageController(viewportFraction: 0.9);
+  }
+
+  @override
+  void didUpdateWidget(covariant _RecommendationCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_currentPage >= widget.games.length) {
+      _currentPage = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_controller.hasClients) {
+          _controller.jumpToPage(0);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 208,
+          child: PageView.builder(
+            controller: _controller,
+            padEnds: false,
+            itemCount: widget.games.length,
+            onPageChanged: (index) => setState(() => _currentPage = index),
+            itemBuilder: (context, index) {
+              return Padding(
+                padding: const EdgeInsets.only(
+                  left: AppSpacing.sm,
+                  right: AppSpacing.md,
+                  bottom: AppSpacing.sm,
+                  top: AppSpacing.xxs,
+                ),
+                child: _RecommendationCard(game: widget.games[index]),
+              );
+            },
+          ),
+        ),
+        if (widget.games.length > 1)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List<Widget>.generate(widget.games.length, (index) {
+                final bool isActive = index == _currentPage;
+                return AnimatedContainer(
+                  duration: AppMotion.fast,
+                  curve: AppMotion.curve,
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xxs + 1,
+                  ),
+                  width: isActive ? 18 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: isActive ? AppColors.primary : AppColors.border,
+                    borderRadius: AppRadius.fullBorderRadius,
+                  ),
+                );
+              }),
+            ),
+          ),
       ],
     );
   }
 }
 
-/// Kartu game horizontal untuk rekomendasi
+/// Kartu rekomendasi imersif: cover penuh, judul tegas, dan alasan singkat.
 class _RecommendationCard extends StatelessWidget {
   final GameModel game;
 
   const _RecommendationCard({required this.game});
 
+  String get _heroTag => gameCoverHeroTag(game, 'rekomendasi');
+
+  void _openDetail(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GameDetailScreen(game: game, heroTag: _heroTag),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 155,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.mdBorderRadius,
-        border: Border.all(color: AppColors.border, width: 1),
-      ),
+    return Material(
+      color: AppColors.surface,
+      borderRadius: AppRadius.cardBorderRadius,
       clipBehavior: Clip.antiAlias,
-      child: Material(
-        color: AppColors.transparent,
-        child: InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => GameDetailScreen(game: game),
+      child: InkWell(
+        onTap: () => _openDetail(context),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Hero(
+              tag: _heroTag,
+              child: _buildCover(),
+            ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.black.withValues(alpha: 0.25),
+                    AppColors.transparent,
+                    AppColors.black.withValues(alpha: 0.9),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0.0, 0.36, 1.0],
+                ),
               ),
-            );
-          },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Cover thumbnail dengan badge rating
-              Stack(
-                children: [
-                  SizedBox(
-                    width: 155,
-                    height: 100,
-                    child: game.coverUrl != null && game.coverUrl!.isNotEmpty
-                        ? Image.network(
-                            game.coverUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => _buildCoverFallback(),
-                          )
-                        : _buildCoverFallback(),
+            ),
+            Positioned(
+              top: AppSpacing.md,
+              right: AppSpacing.md,
+              child: AppBadge.rating(game.rating, compact: true),
+            ),
+            Positioned(
+              top: AppSpacing.md,
+              left: AppSpacing.md,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: AppRadius.fullBorderRadius,
+                ),
+                child: Text(
+                  'UNTUKMU',
+                  style: AppTypography.overline.copyWith(
+                    color: AppColors.onPrimary,
+                    fontSize: 9,
+                    letterSpacing: 1.0,
+                    fontWeight: FontWeight.w800,
                   ),
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.black.withValues(alpha: 0.75),
-                        borderRadius: AppRadius.fullBorderRadius,
-                        border: Border.all(
-                          color: AppColors.border.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+            Positioned(
+              left: AppSpacing.lg,
+              right: AppSpacing.lg,
+              bottom: AppSpacing.lg,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    game.judul,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.titleMedium.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs + 2),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 1),
+                        child: Icon(
+                          Icons.auto_awesome_rounded,
+                          size: 13,
+                          color: AppColors.primary,
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.star_rounded,
-                            size: 12,
-                            color: AppColors.ratingStar,
+                      const SizedBox(width: AppSpacing.xs + 1),
+                      Expanded(
+                        child: Text(
+                          game.alasan != null && game.alasan!.isNotEmpty
+                              ? game.alasan!
+                              : (game.genre.isNotEmpty
+                                  ? game.genre
+                                  : 'Pilihan dari katalog MainGa?'),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: game.alasan != null &&
+                                    game.alasan!.isNotEmpty
+                                ? AppColors.primaryLight
+                                : AppColors.textSecondary,
+                            fontSize: 11,
+                            height: 1.35,
                           ),
-                          const SizedBox(width: 3),
-                          Text(
-                            game.rating.toStringAsFixed(1),
-                            style: const TextStyle(
-                              color: AppColors.ratingStar,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
-
-              // Judul Game & Alasan Singkat
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      game.judul,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.bodyMedium.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    if (game.alasan != null && game.alasan!.isNotEmpty)
-                      Text(
-                        game.alasan!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.labelSmall.copyWith(
-                          color: AppColors.primaryLight,
-                          fontSize: 10,
-                          height: 1.25,
-                        ),
-                      )
-                    else if (game.genre.isNotEmpty)
-                      Text(
-                        game.genre,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.labelSmall.copyWith(
-                          color: AppColors.textSecondary,
-                          fontSize: 10,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCover() {
+    final String? coverUrl = game.coverUrl;
+    if (coverUrl == null || coverUrl.isEmpty) {
+      return _buildCoverFallback();
+    }
+
+    return Image.network(
+      coverUrl,
+      fit: BoxFit.cover,
+      cacheWidth: 720,
+      filterQuality: FilterQuality.medium,
+      errorBuilder: (_, _, _) => _buildCoverFallback(),
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return Container(
+          color: AppColors.surfaceElevated,
+          child: const Center(
+            child: Icon(
+              Icons.sports_esports_rounded,
+              color: AppColors.textMuted,
+              size: 40,
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -925,7 +1173,7 @@ class _RecommendationCard extends StatelessWidget {
         child: Icon(
           Icons.sports_esports_rounded,
           color: AppColors.textMuted,
-          size: 32,
+          size: 40,
         ),
       ),
     );
