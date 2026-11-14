@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_badge.dart';
 import '../../../../core/widgets/app_loading_skeleton.dart';
@@ -11,10 +12,7 @@ import '../../data/models/game_price_model.dart';
 class PriceTrackerSection extends StatefulWidget {
   final int gameIdOrRawgId;
 
-  const PriceTrackerSection({
-    super.key,
-    required this.gameIdOrRawgId,
-  });
+  const PriceTrackerSection({super.key, required this.gameIdOrRawgId});
 
   @override
   State<PriceTrackerSection> createState() => _PriceTrackerSectionState();
@@ -95,7 +93,8 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
       return _buildLoadingState();
     }
 
-    if (_errorMessage != null && (_pricesData == null || !_pricesData!.hargaTersedia)) {
+    if (_errorMessage != null &&
+        (_pricesData == null || !_pricesData!.hargaTersedia)) {
       return _buildUnavailableState();
     }
 
@@ -270,7 +269,9 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
                                 color: AppColors.primaryContainer,
                                 borderRadius: AppRadius.smBorderRadius,
                                 border: Border.all(
-                                  color: AppColors.primary.withValues(alpha: 0.4),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.4,
+                                  ),
                                 ),
                               ),
                               child: Text(
@@ -419,7 +420,8 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
     if (maxPrice == 0) maxPrice = 10;
 
     final double paddingY = (maxPrice - minPrice) * 0.2;
-    final double computedMinY = (minPrice - (paddingY > 1 ? paddingY : 1)).clamp(0.0, double.infinity);
+    final double computedMinY = (minPrice - (paddingY > 1 ? paddingY : 1))
+        .clamp(0.0, double.infinity);
     final double computedMaxY = maxPrice + (paddingY > 1 ? paddingY : 2);
 
     return Container(
@@ -444,15 +446,22 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
-            horizontalInterval: ((computedMaxY - computedMinY) / 4).clamp(1.0, 100.0),
+            horizontalInterval: ((computedMaxY - computedMinY) / 4).clamp(
+              1.0,
+              100.0,
+            ),
             getDrawingHorizontalLine: (value) => FlLine(
               color: AppColors.border.withValues(alpha: 0.5),
               strokeWidth: 1,
             ),
           ),
           titlesData: FlTitlesData(
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
@@ -476,7 +485,9 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 26,
-                interval: (spots.length > 5 ? (spots.length / 4).floorToDouble() : 1),
+                interval: (spots.length > 5
+                    ? (spots.length / 4).floorToDouble()
+                    : 1),
                 getTitlesWidget: (value, meta) {
                   final index = value.toInt();
                   if (index >= 0 && index < sortedHistory.length) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_badge.dart';
 import '../../../../core/widgets/app_loading_skeleton.dart';
@@ -20,11 +21,7 @@ class GameDetailScreen extends StatefulWidget {
   final GameModel game;
   final String? heroTag;
 
-  const GameDetailScreen({
-    super.key,
-    required this.game,
-    this.heroTag,
-  });
+  const GameDetailScreen({super.key, required this.game, this.heroTag});
 
   @override
   State<GameDetailScreen> createState() => _GameDetailScreenState();
@@ -107,8 +104,9 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
         });
       } else if (notifier.lastModifiedActive != null) {
         final bool isAktif = notifier.lastModifiedActive!;
-        final currentData =
-            Map<String, dynamic>.from(_game.wishlistAlertData ?? {});
+        final currentData = Map<String, dynamic>.from(
+          _game.wishlistAlertData ?? {},
+        );
         currentData['aktif'] = isAktif;
         setState(() {
           _game = _game.copyWith(
@@ -182,17 +180,17 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
     final List<String> genreValues = _game.genres.isNotEmpty
         ? _game.genres
         : _game.genre
-            .split(',')
-            .map((e) => e.trim())
-            .where((e) => e.isNotEmpty)
-            .toList();
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList();
     final List<String> platformValues = _game.platforms.isNotEmpty
         ? _game.platforms
         : _game.platform
-            .split(',')
-            .map((e) => e.trim())
-            .where((e) => e.isNotEmpty)
-            .toList();
+              .split(',')
+              .map((e) => e.trim())
+              .where((e) => e.isNotEmpty)
+              .toList();
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -252,10 +250,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
 
                   // ── Genre & Platform ───────────────────────────
                   if (genreValues.isNotEmpty) ...[
-                    _buildTagSection(
-                      title: 'Genre',
-                      values: genreValues,
-                    ),
+                    _buildTagSection(title: 'Genre', values: genreValues),
                     const SizedBox(height: AppSpacing.md),
                   ],
                   if (platformValues.isNotEmpty) ...[
@@ -325,10 +320,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
         background: Stack(
           fit: StackFit.expand,
           children: [
-            Hero(
-              tag: _heroTag,
-              child: _buildCoverImage(),
-            ),
+            Hero(tag: _heroTag, child: _buildCoverImage()),
             // Scrim atas agar tombol kembali selalu terbaca.
             DecoratedBox(
               decoration: BoxDecoration(
@@ -602,10 +594,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.lgBorderRadius,
-        side: BorderSide(
-          color: statusColor.withValues(alpha: 0.4),
-          width: 1.2,
-        ),
+        side: BorderSide(color: statusColor.withValues(alpha: 0.4), width: 1.2),
       ),
       child: InkWell(
         onTap: _openLibraryForm,
@@ -621,11 +610,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                 ),
               ),
               const SizedBox(width: AppSpacing.xs),
-              Icon(
-                Icons.edit_outlined,
-                size: 15,
-                color: statusColor,
-              ),
+              Icon(Icons.edit_outlined, size: 15, color: statusColor),
             ],
           ),
         ),
@@ -816,10 +801,7 @@ class _SimilarGameCard extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => GameDetailScreen(
-                  game: game,
-                  heroTag: _heroTag,
-                ),
+                builder: (_) => GameDetailScreen(game: game, heroTag: _heroTag),
               ),
             );
           },
@@ -831,10 +813,7 @@ class _SimilarGameCard extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Hero(
-                      tag: _heroTag,
-                      child: _buildCover(),
-                    ),
+                    Hero(tag: _heroTag, child: _buildCover()),
                     DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -950,11 +929,7 @@ class _RoundIconButton extends StatelessWidget {
           child: SizedBox(
             width: 48,
             height: 48,
-            child: Icon(
-              icon,
-              color: AppColors.textPrimary,
-              size: 20,
-            ),
+            child: Icon(icon, color: AppColors.textPrimary, size: 20),
           ),
         ),
       ),

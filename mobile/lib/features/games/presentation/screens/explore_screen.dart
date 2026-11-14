@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_badge.dart';
 import '../../../../core/widgets/app_button.dart';
@@ -93,10 +95,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     _genres = results[0] as List<GenreModel>;
     _platforms = results[1] as List<PlatformModel>;
 
-    await Future.wait([
-      _fetchGames(resetPage: true),
-      _fetchRecommendations(),
-    ]);
+    await Future.wait([_fetchGames(resetPage: true), _fetchRecommendations()]);
   }
 
   Future<void> _fetchRecommendations() async {
@@ -117,10 +116,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   Future<void> _onRefresh() async {
-    await Future.wait([
-      _fetchGames(resetPage: true),
-      _fetchRecommendations(),
-    ]);
+    await Future.wait([_fetchGames(resetPage: true), _fetchRecommendations()]);
   }
 
   Future<void> _fetchGames({bool resetPage = false}) async {
@@ -215,8 +211,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            final double bottomInset =
-                MediaQuery.of(context).viewInsets.bottom;
+            final double bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
             return Container(
               decoration: BoxDecoration(
@@ -364,8 +359,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             color: AppColors.ratingStar.withValues(alpha: 0.15),
                             borderRadius: AppRadius.fullBorderRadius,
                             border: Border.all(
-                              color:
-                                  AppColors.ratingStar.withValues(alpha: 0.3),
+                              color: AppColors.ratingStar.withValues(
+                                alpha: 0.3,
+                              ),
                             ),
                           ),
                           child: Row(
@@ -439,7 +435,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool hasActiveFilters = _selectedPlatform != 'Semua' || _minRating > 0;
+    final bool hasActiveFilters =
+        _selectedPlatform != 'Semua' || _minRating > 0;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -639,8 +636,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
               itemCount: _genres.length + 1,
               separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
               itemBuilder: (context, index) {
-                final String genreName =
-                    index == 0 ? 'Semua' : _genres[index - 1].nama;
+                final String genreName = index == 0
+                    ? 'Semua'
+                    : _genres[index - 1].nama;
                 final bool isSelected = _selectedGenre == genreName;
 
                 return Center(
@@ -659,8 +657,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       color: isSelected
                           ? AppColors.onSecondary
                           : AppColors.textSecondary,
-                      fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
                     ),
                     labelPadding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.sm,
@@ -685,10 +684,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Container(
-            height: 1,
-            color: AppColors.border.withValues(alpha: 0.55),
-          ),
+          Container(height: 1, color: AppColors.border.withValues(alpha: 0.55)),
         ],
       ),
     );
@@ -720,9 +716,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
       return AppEmptyState(
         icon: Icons.sports_esports_outlined,
         title: 'Tidak Ada Game Ditemukan',
-        description:
-            'Coba ubah kata kunci pencarian atau sesuaikan opsi filter genre dan rating.',
-        actionText: (_searchController.text.isNotEmpty ||
+        description: 'Coba ubah kata kunci pencarian atau sesuaikan opsi filter genre dan rating.',
+        actionText:
+            (_searchController.text.isNotEmpty ||
                 _selectedGenre != 'Semua' ||
                 _selectedPlatform != 'Semua' ||
                 _minRating > 0)
@@ -743,7 +739,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
     final bool isSearching = _searchController.text.trim().isNotEmpty;
     final bool hasActiveFilters =
-        _selectedGenre != 'Semua' || _selectedPlatform != 'Semua' || _minRating > 0;
+        _selectedGenre != 'Semua' ||
+        _selectedPlatform != 'Semua' ||
+        _minRating > 0;
     final bool showRecommendations = !isSearching && !hasActiveFilters;
 
     final int headerOffset = showRecommendations ? 1 : 0;
@@ -808,8 +806,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                       height: 14,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.primary,
+                        ),
                       ),
                     ),
                   )
@@ -1031,10 +1030,7 @@ class _RecommendationCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Hero(
-              tag: _heroTag,
-              child: _buildCover(),
-            ),
+            Hero(tag: _heroTag, child: _buildCover()),
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -1113,13 +1109,13 @@ class _RecommendationCard extends StatelessWidget {
                           game.alasan != null && game.alasan!.isNotEmpty
                               ? game.alasan!
                               : (game.genre.isNotEmpty
-                                  ? game.genre
-                                  : 'Pilihan dari katalog MainGa?'),
+                                    ? game.genre
+                                    : 'Pilihan dari katalog MainGa?'),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.labelSmall.copyWith(
-                            color: game.alasan != null &&
-                                    game.alasan!.isNotEmpty
+                            color:
+                                game.alasan != null && game.alasan!.isNotEmpty
                                 ? AppColors.primaryLight
                                 : AppColors.textSecondary,
                             fontSize: 11,
