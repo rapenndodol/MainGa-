@@ -425,6 +425,60 @@ Aplikasi **MainGa?** kini memakai fondasi antarmuka yang lebih rapi dan konsiste
 
 ---
 
+## 🚀 Pembaruan UI Modern - Phase 2: Autentikasi, Navigasi, Explore & Detail Game
+
+Phase 2 melanjutkan fondasi desain Phase 1 ke layar yang paling sering dipakai. Fokusnya adalah pengalaman autentikasi yang lebih tenang, navigasi yang selalu jelas, katalog yang mudah dipindai, serta halaman detail yang imersif. Seluruh perilaku aplikasi dipertahankan: tidak ada perubahan pada backend, endpoint API, data source, notifier, konstanta, storage, validasi, parsing, maupun aturan bisnis.
+
+### 1. Ringkasan Perubahan
+
+- **Autentikasi (Splash, Login, Register)**:
+  - Kerangka bersama `AuthPageShell` dengan wordmark besar `MainGa?`, penanda lime, bidang input lega, dan tombol pill.
+  - `AuthBrandMark` hadir sebagai penanda visual tanpa menambah teks `MainGa?` duplikat.
+  - Galat validasi server dipetakan ke pesan inline per field melalui `AuthInlineError`; kegagalan umum tampil di dalam form, bukan SnackBar.
+  - `AppPasswordField` menambahkan kontrol tampil/sembunyikan password dengan label aksesibilitas dan target sentuh 48dp.
+- **Navigasi Bawah**:
+  - `FloatingNavBar` menjadi satu-satunya sumber navigasi 4 tab dengan indikator lime yang bergeser halus, ikon terisi saat aktif, dan `HapticFeedback.selectionClick`.
+  - Keempat label (`Jelajah`, `Library`, `Wishlist`, `Profil`) selalu terlihat; dock menghormati safe area dan menyisakan ruang gulir di atasnya.
+- **Explore**:
+  - Header tetap di atas berisi judul, pencarian, tombol filter, dan chip genre 48dp.
+  - Bagian **Rekomendasi untuk kamu** memakai carousel `PageView` dengan kartu poster, alasan rekomendasi, indikator titik, skeleton, dan pesan kosong yang komunikatif.
+  - Katalog memakai `AppGameCard` editorial: cover 88x118, judul tegas, metadata ringkas, animasi masuk bertahap, dan Hero menuju detail.
+  - Pagination, tarik-untuk-menyegarkan, pencarian, filter, state galat/kosong, serta atribusi **Data by RAWG.io** tetap berfungsi.
+- **Detail Game**:
+  - `SliverAppBar` imersif dengan cover Hero, scrim netral, penanda `DETAIL GAME`, dan tombol kembali 48dp.
+  - Satu badge rating, metadata tanggal rilis/status, kartu Genre dan Platform, kartu **Tentang Game** dengan aksi **Baca selengkapnya**, serta aksi Library/Wishlist berdampingan.
+  - Game serupa tampil sebagai carousel kartu poster dengan badge rating; atribusi RAWG tetap ada.
+- **Pelacak Harga (khusus Detail Game)**:
+  - Header **Harga** dan **Riwayat Harga** kini konsisten dengan `AppSectionHeader` serta badge `USD` eksplisit.
+  - Banner termurah, kartu toko, diskon, estimasi Rupiah, status belum tersedia, dan grafik riwayat dirapikan tanpa mengubah data atau logika pemuatan.
+
+### 2. Daftar Keputusan Desain
+
+1. **Satu Kerangka Auth, Dua Layar**: Login dan Register berbagi `AuthPageShell` agar ritme judul, jarak, dan posisi brand mark konsisten tanpa menduplikasi layout.
+2. **Galat di Dekat Sumbernya**: Pesan field tampil tepat di bawah input terkait; kegagalan form-level tetap terlihat tanpa berpindah konteks ke SnackBar.
+3. **Hero per Konteks**: Tag Hero memakai scope `katalog`, `rekomendasi`, dan `serupa` sehingga game yang sama di beberapa daftar tidak menghasilkan tag ganda.
+4. **Header Explore Statis, Konten Dinamis**: Judul, pencarian, filter, dan genre tetap terlihat saat katalog digulir; hanya area konten yang bergerak.
+5. **Carousel Rekomendasi yang Jujur**: Skeleton hanya muncul saat memuat, pesan kosong menjelaskan langkah berikutnya, dan indikator titik tidak ditampilkan untuk satu item.
+6. **Katalog Editorial**: Baris tanpa border dengan cover dominan memberi ruang bagi judul panjang dan metadata, sekaligus menjaga performa daftar panjang.
+7. **Detail Bertahap**: Cover menjadi pembuka, identitas dan aksi muncul lebih dulu, lalu informasi, harga, dan game serupa mengikuti alur membaca alami.
+8. **Aksi Berdampingan yang Seimbang**: Tombol Library dan Wishlist memakai tinggi tetap 56dp dan lebar sama agar tidak ada teks yang terpotong atau tombol yang mengecil.
+9. **Format Harga Eksplisit**: Label `USD` pada header dan estimasi Rupiah pada tiap toko mencegah ambiguitas mata uang tanpa mengubah nilai data.
+10. **Target Sentuh & Gerak**: Chip, tombol, ikon, dan item navigasi memakai target minimal 48dp; animasi tetap menghormati preferensi reduce-motion.
+11. **Phase 3 Tidak Disentuh**: Library, Wishlist, Profil, Statistik, dan Notifikasi tetap memakai implementasi sebelumnya.
+
+### 3. Verifikasi Phase 2
+
+- `flutter analyze` → **No issues found**.
+- `flutter test` → **45 tests passed** (seluruh pengujian lama tetap lulus).
+- `mobile/lib/core/theme/app_colors.dart` tidak berubah; git blob hash tetap `a9f7333d5939236af642f9dfecca46fa781bb380`.
+- Tidak ada warna hardcoded (`Color(0x...)` atau `Colors.*`) di luar `app_colors.dart`.
+- Tidak ada diff pada `backend/`, data source/model, notifier, konstanta, storage, pengujian, maupun layar Phase 3.
+- Pemeriksaan visual pada viewport mobile 390x844 dengan backend lokal mencakup Login, Register, Explore (termasuk carousel rekomendasi), Detail (hero, aksi, Genre/Platform, Tentang Game), harga multi-toko, riwayat harga, dan game serupa.
+
+Ringkasan Phase 1 di atas tetap dipertahankan sebagai fondasi. Phase 3 belum dimulai.
+
+---
+
 ## 🚀 Cara Menjalankan & Menguji Aplikasi
 
 ### 1. Backend (Laravel)
