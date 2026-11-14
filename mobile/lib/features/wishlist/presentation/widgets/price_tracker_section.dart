@@ -228,46 +228,21 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                item.toko,
-                                style: AppTypography.labelMedium.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 12.5,
-                                  color: AppColors.textPrimary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (isCheapest) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 1.5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.success.withValues(alpha: 0.2),
-                                  borderRadius: AppRadius.smBorderRadius,
-                                ),
-                                child: Text(
-                                  'Termurah',
-                                  style: AppTypography.labelSmall.copyWith(
-                                    color: AppColors.success,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
+                        Text(
+                          item.toko,
+                          style: AppTypography.labelMedium.copyWith(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12.5,
+                            color: AppColors.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Dicek: ${_formatDate(item.dicekPada, item.dicekPadaRaw)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: AppTypography.bodySmall.copyWith(
                             color: AppColors.textMuted,
                             fontSize: 11,
