@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/app_sheet_shell.dart';
 import '../../data/datasources/library_remote_data_source.dart';
 import '../../data/models/library_entry_model.dart';
 import '../controllers/library_notifier.dart';
@@ -77,7 +79,8 @@ class _RandomGameSheetState extends State<RandomGameSheet> {
     } else {
       setState(() {
         _isLoading = false;
-        _errorMessage = result['message']?.toString() ?? 'Gagal memilih game acak';
+        _errorMessage =
+            result['message']?.toString() ?? 'Gagal memilih game acak';
       });
     }
   }
@@ -110,7 +113,9 @@ class _RandomGameSheetState extends State<RandomGameSheet> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${updatedEntry.judul} kini berstatus Sedang Dimainkan!'),
+          content: Text(
+            '${updatedEntry.judul} kini berstatus Sedang Dimainkan!',
+          ),
           backgroundColor: AppColors.surfaceElevated,
           duration: const Duration(seconds: 2),
         ),
@@ -118,7 +123,9 @@ class _RandomGameSheetState extends State<RandomGameSheet> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['message']?.toString() ?? 'Gagal mengubah status game'),
+          content: Text(
+            result['message']?.toString() ?? 'Gagal mengubah status game',
+          ),
           backgroundColor: AppColors.error,
         ),
       );
@@ -127,74 +134,25 @@ class _RandomGameSheetState extends State<RandomGameSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.xl,
-        top: AppSpacing.md,
-        left: AppSpacing.xl,
-        right: AppSpacing.xl,
-      ),
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceElevated,
-        borderRadius: BorderRadius.vertical(
-          top: AppRadius.rXl,
-        ),
+    return AppSheetShell(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.xl,
+        AppSpacing.xl,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Drag handle
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.border,
-              borderRadius: BorderRadius.circular(2),
-            ),
+          AppSheetHeader(
+            eyebrow: 'Mode acak',
+            title: 'Acak Game Backlog',
+            subtitle: 'Pilihan game untuk kamu mainkan berikutnya',
+            icon: Icons.casino_rounded,
+            onClose: () => Navigator.pop(context),
           ),
           const SizedBox(height: AppSpacing.lg),
-
-          // Header
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryContainer,
-                  borderRadius: AppRadius.smBorderRadius,
-                ),
-                child: const Icon(
-                  Icons.casino_rounded,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Acak Game Backlog',
-                      style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      'Pilihan game untuk kamu mainkan berikutnya',
-                      style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close_rounded, color: AppColors.textMuted),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-
-          // Body
           if (_isLoading)
             _buildLoadingState()
           else if (_isEmptyBacklog)
@@ -224,7 +182,9 @@ class _RandomGameSheetState extends State<RandomGameSheet> {
           const SizedBox(height: AppSpacing.lg),
           Text(
             'Mengacak game dari backlog...',
-            style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -271,7 +231,7 @@ class _RandomGameSheetState extends State<RandomGameSheet> {
             text: 'Mengerti',
             onPressed: () => Navigator.pop(context),
             variant: AppButtonVariant.outline,
-            height: 44,
+            height: 48,
           ),
         ],
       ),
@@ -291,7 +251,9 @@ class _RandomGameSheetState extends State<RandomGameSheet> {
           const SizedBox(height: AppSpacing.sm),
           Text(
             _errorMessage ?? 'Terjadi kesalahan',
-            style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -299,7 +261,7 @@ class _RandomGameSheetState extends State<RandomGameSheet> {
             text: 'Coba Lagi',
             onPressed: _fetchRandomGame,
             variant: AppButtonVariant.outline,
-            height: 44,
+            height: 48,
           ),
         ],
       ),
@@ -391,7 +353,10 @@ class _RandomGameSheetState extends State<RandomGameSheet> {
                       children: [
                         if (genre.isNotEmpty) ...[
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.surfaceElevated,
                               borderRadius: AppRadius.fullBorderRadius,
@@ -436,32 +401,47 @@ class _RandomGameSheetState extends State<RandomGameSheet> {
 
         const SizedBox(height: AppSpacing.xl),
 
-        // Dua Tombol Aksi: "Mainkan sekarang" & "Acak ulang"
-        Row(
-          children: [
-            Expanded(
-              flex: 1,
-              child: AppButton(
-                text: 'Acak Ulang',
-                icon: Icons.replay_rounded,
-                onPressed: _isUpdating ? null : _fetchRandomGame,
-                variant: AppButtonVariant.outline,
-                height: 48,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              flex: 2,
-              child: AppButton(
-                text: 'Mainkan Sekarang',
-                icon: Icons.play_arrow_rounded,
-                onPressed: _isUpdating ? null : _handlePlayNow,
-                isLoading: _isUpdating,
-                variant: AppButtonVariant.primary,
-                height: 48,
-              ),
-            ),
-          ],
+        // Dua Tombol Aksi: "Mainkan sekarang" & "Acak ulang".
+        // Di layar sempit tombol ditumpuk agar label tetap utuh pada text scale 1.3.
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final bool stacked = constraints.maxWidth < 380;
+
+            final Widget playButton = AppButton(
+              text: 'Mainkan Sekarang',
+              icon: Icons.play_arrow_rounded,
+              onPressed: _isUpdating ? null : _handlePlayNow,
+              isLoading: _isUpdating,
+              variant: AppButtonVariant.primary,
+              height: 50,
+            );
+
+            final Widget shuffleButton = AppButton(
+              text: 'Acak Ulang',
+              icon: Icons.replay_rounded,
+              onPressed: _isUpdating ? null : _fetchRandomGame,
+              variant: AppButtonVariant.outline,
+              height: 48,
+            );
+
+            if (stacked) {
+              return Column(
+                children: [
+                  SizedBox(width: double.infinity, child: playButton),
+                  const SizedBox(height: AppSpacing.sm),
+                  SizedBox(width: double.infinity, child: shuffleButton),
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(flex: 1, child: shuffleButton),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(flex: 2, child: playButton),
+              ],
+            );
+          },
         ),
       ],
     );

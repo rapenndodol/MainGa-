@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../theme/app_theme.dart';
 
 enum AppButtonVariant { primary, secondary, outline, destructive, ghost }
@@ -104,7 +105,8 @@ class _AppButtonState extends State<AppButton> {
                       widget.onPressed!();
                     },
               child: Container(
-                padding: widget.padding ??
+                padding:
+                    widget.padding ??
                     const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
                 decoration: BoxDecoration(
                   borderRadius: AppRadius.fullBorderRadius,
@@ -125,23 +127,14 @@ class _AppButtonState extends State<AppButton> {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(foregroundColor),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            foregroundColor,
+                          ),
                         ),
                       )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          if (widget.icon != null) ...[
-                            Icon(
-                              widget.icon,
-                              size: 18,
-                              color: foregroundColor,
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                          ],
-                          Text(
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          final Widget label = Text(
                             widget.text,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -150,12 +143,33 @@ class _AppButtonState extends State<AppButton> {
                                   ? foregroundColor.withValues(alpha: 0.5)
                                   : foregroundColor,
                             ),
-                          ),
-                          if (widget.trailingIcon != null) ...[
-                            const SizedBox(width: AppSpacing.sm),
-                            widget.trailingIcon!,
-                          ],
-                        ],
+                          );
+
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (widget.icon != null) ...[
+                                Icon(
+                                  widget.icon,
+                                  size: 18,
+                                  color: foregroundColor,
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                              ],
+                              // Label dipangkas dengan ellipsis hanya saat lebar
+                              // tombol terbatas, mis. di dalam sheet atau dialog.
+                              if (constraints.hasBoundedWidth)
+                                Flexible(child: label)
+                              else
+                                label,
+                              if (widget.trailingIcon != null) ...[
+                                const SizedBox(width: AppSpacing.sm),
+                                widget.trailingIcon!,
+                              ],
+                            ],
+                          );
+                        },
                       ),
               ),
             ),

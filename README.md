@@ -475,7 +475,59 @@ Phase 2 melanjutkan fondasi desain Phase 1 ke layar yang paling sering dipakai. 
 - Tidak ada diff pada `backend/`, data source/model, notifier, konstanta, storage, pengujian, maupun layar Phase 3.
 - Pemeriksaan visual pada viewport mobile 390x844 dengan backend lokal mencakup Login, Register, Explore (termasuk carousel rekomendasi), Detail (hero, aksi, Genre/Platform, Tentang Game), harga multi-toko, riwayat harga, dan game serupa.
 
-Ringkasan Phase 1 di atas tetap dipertahankan sebagai fondasi. Phase 3 belum dimulai.
+Ringkasan Phase 1 di atas tetap dipertahankan sebagai fondasi. Phase 3 melanjutkan bahasa desain yang sama ke layar utama lainnya.
+
+---
+
+## 🎨 Pembaruan UI Modern - Phase 3: Library, Wishlist, Profil, Statistik & Notifikasi
+
+Phase 3 menutup sisa layar utama dengan bahasa visual yang sama seperti Explore dan Detail Game: header besar, ritme spasi konsisten, kartu yang mudah dipindai, serta state kosong, galat, dan memuat yang komunikatif. Seluruh perilaku aplikasi dipertahankan: tidak ada perubahan pada backend, endpoint API, data source, model, notifier, autentikasi, validasi, parsing, maupun aturan bisnis.
+
+### 1. Ringkasan Perubahan
+
+- **Fondasi bersama (`core/widgets`)**:
+  - `AppScreenHeader`, `AppFilterChipBar`, `AppInteractiveCard`, `AppConfirmDialog`, serta `AppSheetShell`/`AppSheetHeader` menyatukan header, chip filter, animasi kartu, dialog konfirmasi, dan kerangka bottom sheet lintas layar Fase 3.
+  - `AppCardSkeletonList` menambahkan skeleton khusus kartu Library, Wishlist, dan Notifikasi agar perpindahan dari memuat ke konten tidak melompat.
+- **Library**:
+  - Header besar dengan eyebrow, jumlah koleksi dinamis, subtitle lebar penuh, dan tombol **Acak** 48dp.
+  - Chip status dapat digulir; kartu menampilkan status, judul, genre/platform, rating pribadi, jam main, tanggal tamat, dan catatan.
+  - Mengetuk cover membuka Detail Game lewat Hero scope `library`; mengetuk badan kartu membuka sheet edit. Pagination, tarik-untuk-menyegarkan, dan state kosong/galat tetap berfungsi.
+- **Wishlist**:
+  - Header dan chip filter (**Semua**, **Pantauan Aktif**, **Nonaktif**) konsisten dengan Library.
+  - Kartu menampilkan target USD, estimasi Rupiah, harga termurah, diskon, dan status target. Badge **Mencapai target!** memakai isian lime dengan teks `onPrimary` tanpa shadow berlebih.
+  - Switch pantauan, Dismissible hapus, dialog konfirmasi, serta Hero menuju detail dipertahankan.
+- **Profil & Statistik**:
+  - Header akun dengan lonceng notifikasi berbadge, kartu profil, dan dialog konfirmasi logout.
+  - Baris KPI, grafik **Game Tamat**, dan donut **Genre Favorit** dirapikan; label KPI dapat turun ke dua baris dan tinggi kartu tetap seragam pada text scale 1.3.
+  - Empty state statistik, state galat dengan tombol coba lagi, dan skeleton pemuatan ditambahkan tanpa mengubah sumber data.
+- **Notifikasi**:
+  - Kartu belum dibaca memakai latar terangkat, garis aksen lime tipis, dan titik status; waktu relatif, toko, serta harga USD tampil sebagai metadata ringkas.
+  - Tandai semua dibaca, pagination, skeleton, state kosong, dan navigasi ke detail game tetap berfungsi.
+- **Bottom sheet**:
+  - Sheet Library, Wishlist, dan Acak Game memakai `AppSheetShell`/`AppSheetHeader`; penanganan keyboard dan safe area terpusat.
+  - Tombol aksi sheet Acak otomatis ditumpuk pada lebar di bawah 380dp agar label tetap utuh. Validasi, estimasi IDR dinamis, dan logika acak tidak berubah.
+
+### 2. Daftar Keputusan Desain
+
+1. **Komponen Bersama, Bukan Duplikasi**: Pola header, chip filter, kartu interaktif, dialog, dan sheet diekstrak ke `core/widgets` agar Library, Wishlist, Profil, dan Notifikasi bergerak dengan aturan yang sama.
+2. **Lime untuk Aksi Utama**: Chip filter terpilih memakai isian putih dengan teks `onSecondary`; lime disimpan untuk CTA, penanda aktif, dan badge pencapaian.
+3. **Hero per Konteks**: Cover Library dan Wishlist memakai scope Hero berbeda (`library` dan `wishlist`) sehingga game yang sama tidak menghasilkan tag ganda.
+4. **Dua Area Ketuk yang Jelas**: Pada kartu Library, cover membuka detail dan badan kartu membuka edit; keduanya diberi label aksesibilitas.
+5. **Status Pencapaian Tenang**: Badge target tercapai tidak lagi memakai glow success; lime solid dengan teks `onPrimary` lebih tegas dan tetap kontras.
+6. **Header Mengikuti Explore**: Judul 30px, eyebrow bertanda lime, dan subtitle memakai lebar penuh agar tidak terhimpit tombol aksi pada 360dp.
+7. **Tipografi Angka Konsisten**: Rating, jam main, target, harga, dan persentase memakai `AppTypography.tabular` agar kolom angka stabil.
+8. **Aksesibilitas Sejak Awal**: Target sentuh minimal 48dp, label semantik untuk aksi penting, dukungan text scale 1.3 pada 360dp, dan seluruh animasi menghormati `MediaQuery.disableAnimations`.
+9. **Gerak Singkat dan Tenang**: Transisi memakai durasi 150-300ms dengan `easeOutCubic`; kartu masuk bertahap maksimal enam item agar daftar panjang tetap responsif.
+10. **Perbaikan Layout Terkait Fase 3**: `AppButton` dan `AppStatusChip` dipertajam agar label panjang terpotong dengan ellipsis saat lebar terbatas, dan chip status tidak lagi meluber di kartu Library. Perubahan ini hanya layout, tanpa mengubah perilaku.
+
+### 3. Verifikasi Phase 3
+
+- `flutter analyze` → **No issues found**.
+- `flutter test` → **45 tests passed** (seluruh pengujian lama tetap lulus).
+- `mobile/lib/core/theme/app_colors.dart` tidak berubah; git blob hash tetap `a9f7333d5939236af642f9dfecca46fa781bb380`.
+- Tidak ada warna hardcoded (`Color(0x...)` maupun `Colors.*`) di file yang diubah.
+- Tidak ada diff pada `backend/`, data source/model, notifier, konstanta, storage, autentikasi, validasi, parsing, maupun pengujian.
+- Pemeriksaan visual sementara pada viewport 360x800 dengan text scale 1.3 mencakup Library, Wishlist, Profil, Notifikasi, Statistik, kartu, dan ketiga bottom sheet; temuan overflow sudah diperbaiki sebelum harness visual dihapus.
 
 ---
 

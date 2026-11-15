@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_interactive_card.dart';
 import '../../data/models/notification_model.dart';
 
 class NotificationCard extends StatelessWidget {
   final NotificationModel notification;
   final VoidCallback onTap;
+  final int index;
 
   const NotificationCard({
     super.key,
     required this.notification,
     required this.onTap,
+    this.index = 0,
   });
 
   String _formatRelativeTime(String? dateStr) {
@@ -32,161 +36,206 @@ class NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isUnread = !notification.sudahDibaca;
-    final coverUrl = notification.game?.coverUrl;
-    final storeName = notification.toko;
-    final price = notification.harga;
-    final relativeTime = _formatRelativeTime(notification.waktu ?? notification.createdAt);
+    final String? coverUrl = notification.game?.coverUrl;
+    final String? storeName = notification.toko;
+    final double? price = notification.harga;
+    final String relativeTime = _formatRelativeTime(
+      notification.waktu ?? notification.createdAt,
+    );
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm + 2),
-      decoration: BoxDecoration(
-        color: isUnread ? AppColors.surfaceHighlight.withValues(alpha: 0.6) : AppColors.surface,
-        borderRadius: AppRadius.lgBorderRadius,
-        border: Border.all(
-          color: isUnread ? AppColors.primary.withValues(alpha: 0.4) : AppColors.border,
-          width: isUnread ? 1.2 : 1.0,
-        ),
-      ),
-      child: Material(
-        color: AppColors.transparent,
-        child: InkWell(
+    return AppInteractiveCard(
+      index: index,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm + 2),
+        decoration: BoxDecoration(
+          color: isUnread ? AppColors.surfaceElevated : AppColors.surface,
           borderRadius: AppRadius.lgBorderRadius,
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          border: Border.all(
+            color: isUnread
+                ? AppColors.primary.withValues(alpha: 0.45)
+                : AppColors.border,
+            width: isUnread ? 1.2 : 1,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Material(
+          color: AppColors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            child: Stack(
               children: [
-                // ── Cover Thumbnail / Game Icon ───────────
-                ClipRRect(
-                  borderRadius: AppRadius.mdBorderRadius,
-                  child: Container(
-                    width: 52,
-                    height: 52,
-                    color: AppColors.surfaceElevated,
-                    child: coverUrl != null && coverUrl.isNotEmpty
-                        ? Image.network(
-                            coverUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => const Icon(
-                              Icons.sports_esports_rounded,
-                              color: AppColors.textMuted,
-                              size: 26,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.sports_esports_rounded,
-                            color: AppColors.textMuted,
-                            size: 26,
-                          ),
+                if (isUnread)
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: Container(width: 3, color: AppColors.primary),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-
-                // ── Content Info ──────────────────────────
-                Expanded(
-                  child: Column(
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.md + (isUnread ? 3 : 0),
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                  ),
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Judul Game & Penanda Belum Dibaca
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              notification.judulGame,
-                              style: AppTypography.titleSmall.copyWith(
-                                fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
-                                color: isUnread ? AppColors.textPrimary : AppColors.textSecondary,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (isUnread) ...[
-                            const SizedBox(width: AppSpacing.xs),
-                            Container(
-                              width: 8,
-                              height: 8,
-                              margin: const EdgeInsets.only(top: 4),
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-
-                      // Pesan Notifikasi
-                      Text(
-                        notification.pesan,
-                        style: AppTypography.bodySmall.copyWith(
-                          color: isUnread ? AppColors.textPrimary : AppColors.textSecondary,
-                          height: 1.35,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-
-                      // Toko, Harga, dan Waktu Relatif
-                      Row(
-                        children: [
-                          if (storeName != null && storeName.isNotEmpty) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceElevated,
-                                borderRadius: AppRadius.smBorderRadius,
-                                border: Border.all(color: AppColors.border),
-                              ),
-                              child: Text(
-                                storeName,
-                                style: AppTypography.labelSmall.copyWith(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textSecondary,
+                      _buildThumbnail(coverUrl),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (isUnread) ...[
+                                  Container(
+                                    width: 7,
+                                    height: 7,
+                                    margin: const EdgeInsets.only(top: 5),
+                                    decoration: const BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.xs + 2),
+                                ],
+                                Expanded(
+                                  child: Text(
+                                    notification.judulGame,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTypography.titleSmall.copyWith(
+                                      fontWeight: isUnread
+                                          ? FontWeight.w800
+                                          : FontWeight.w600,
+                                      color: isUnread
+                                          ? AppColors.textPrimary
+                                          : AppColors.textSecondary,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
-                            const SizedBox(width: AppSpacing.xs),
-                          ],
-                          if (price != null && price > 0) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.primaryContainer,
-                                borderRadius: AppRadius.smBorderRadius,
-                              ),
-                              child: Text(
-                                '\$${price.toStringAsFixed(2)}',
-                                style: AppTypography.labelSmall.copyWith(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primaryLight,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.xs),
-                          ],
-                          const Spacer(),
-                          if (relativeTime.isNotEmpty)
+                            const SizedBox(height: AppSpacing.xs + 1),
                             Text(
-                              relativeTime,
-                              style: AppTypography.labelSmall.copyWith(
-                                fontSize: 11,
-                                color: AppColors.textMuted,
+                              notification.pesan,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.bodySmall.copyWith(
+                                color: isUnread
+                                    ? AppColors.textSecondary
+                                    : AppColors.textMuted,
+                                height: 1.4,
                               ),
                             ),
-                        ],
+                            if ((storeName != null && storeName.isNotEmpty) ||
+                                (price != null && price > 0) ||
+                                relativeTime.isNotEmpty) ...[
+                              const SizedBox(height: AppSpacing.sm),
+                              Wrap(
+                                spacing: AppSpacing.xs,
+                                runSpacing: AppSpacing.xs,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  if (storeName != null && storeName.isNotEmpty)
+                                    _metaChip(
+                                      text: storeName,
+                                      background: isUnread
+                                          ? AppColors.surface
+                                          : AppColors.surfaceElevated,
+                                      foreground: AppColors.textSecondary,
+                                      borderColor: AppColors.border,
+                                    ),
+                                  if (price != null && price > 0)
+                                    _metaChip(
+                                      text: '\$${price.toStringAsFixed(2)}',
+                                      background: AppColors.primaryContainer,
+                                      foreground: AppColors.primaryLight,
+                                      borderColor: AppColors.primary.withValues(
+                                        alpha: 0.28,
+                                      ),
+                                      bold: true,
+                                    ),
+                                  if (relativeTime.isNotEmpty)
+                                    Text(
+                                      relativeTime,
+                                      style: AppTypography.labelSmall.copyWith(
+                                        fontSize: 10,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThumbnail(String? coverUrl) {
+    return ClipRRect(
+      borderRadius: AppRadius.controlLargeBorderRadius,
+      child: Container(
+        width: 54,
+        height: 54,
+        color: AppColors.surfaceHighlight,
+        child: coverUrl != null && coverUrl.isNotEmpty
+            ? Image.network(
+                coverUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => _buildFallbackIcon(),
+              )
+            : _buildFallbackIcon(),
+      ),
+    );
+  }
+
+  Widget _buildFallbackIcon() {
+    return const Center(
+      child: Icon(
+        Icons.sports_esports_rounded,
+        color: AppColors.textMuted,
+        size: 24,
+      ),
+    );
+  }
+
+  Widget _metaChip({
+    required String text,
+    required Color background,
+    required Color foreground,
+    required Color borderColor,
+    bool bold = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: AppRadius.smBorderRadius,
+        border: Border.all(color: borderColor),
+      ),
+      child: Text(
+        text,
+        style: AppTypography.tabular(
+          AppTypography.labelSmall.copyWith(
+            fontSize: 10,
+            fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
+            color: foreground,
           ),
         ),
       ),

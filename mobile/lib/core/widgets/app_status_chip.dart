@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_theme.dart';
 
 /// Helper mapping status game koleksi ke warna dan ikon tema baru
@@ -85,17 +86,12 @@ class AppStatusChip extends StatelessWidget {
           width: isSelected ? 1.5 : 1,
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: compact ? 12 : 14,
-            color: color,
-          ),
-          const SizedBox(width: AppSpacing.xs + 1),
-          Text(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final Widget label = Text(
             status,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: AppTypography.tabular(
               AppTypography.labelSmall.copyWith(
                 color: color,
@@ -103,8 +99,21 @@ class AppStatusChip extends StatelessWidget {
                 fontSize: compact ? 11 : 12,
               ),
             ),
-          ),
-        ],
+          );
+
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: compact ? 12 : 14, color: color),
+              const SizedBox(width: AppSpacing.xs + 1),
+              // Di dalam kartu sempit label dipangkas agar chip tidak meluber.
+              if (constraints.hasBoundedWidth)
+                Flexible(child: label)
+              else
+                label,
+            ],
+          );
+        },
       ),
     );
 

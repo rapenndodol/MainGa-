@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_error_state.dart';
 import '../../../../core/widgets/app_loading_skeleton.dart';
+import '../../../../core/widgets/app_screen_header.dart';
 import '../../../games/data/models/game_model.dart';
 import '../../../games/presentation/screens/game_detail_screen.dart';
 import '../../data/datasources/notification_remote_data_source.dart';
@@ -138,7 +140,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Future<void> _handleNotificationTap(NotificationModel notification) async {
     // Jika belum dibaca, tandai sudah dibaca di server dan lokal
     if (!notification.sudahDibaca) {
-      NotificationNotifier.instance.markAsRead(notification.id, wasUnread: true);
+      NotificationNotifier.instance.markAsRead(
+        notification.id,
+        wasUnread: true,
+      );
       setState(() {
         _notifications = _notifications.map((n) {
           if (n.id == notification.id) {
@@ -170,57 +175,76 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
+  String get _subtitle {
+    if (_isLoading) return 'Memuat pemberitahuan...';
+    if (_notifications.isEmpty) {
+      return 'Diskon dan penurunan harga incaranmu.';
+    }
+    final int unread = _notifications.where((n) => !n.sudahDibaca).length;
+    if (unread > 0) {
+      return '$unread pemberitahuan belum dibaca.';
+    }
+    return 'Semua pemberitahuan sudah dibaca.';
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool hasUnread = _notifications.any((n) => !n.sudahDibaca);
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        backgroundColor: AppColors.bg,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Notifikasi',
-          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          if (!_isLoading && _notifications.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(right: AppSpacing.sm),
-              child: TextButton.icon(
-                onPressed: hasUnread && !_isMarkingAllAsRead ? _handleMarkAllAsRead : null,
-                icon: _isMarkingAllAsRead
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                        ),
-                      )
-                    : const Icon(Icons.done_all_rounded, size: 16),
-                label: Text(
-                  'Tandai semua dibaca',
-                  style: AppTypography.labelSmall.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: hasUnread ? AppColors.primaryLight : AppColors.textMuted,
-                  ),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            AppScreenHeader(
+              eyebrow: 'Pemberitahuan',
+              title: 'Notifikasi',
+              subtitle: _subtitle,
+              leading: IconButton(
+                tooltip: 'Kembali',
+                icon: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: AppColors.textPrimary,
                 ),
+                onPressed: () => Navigator.pop(context),
+              ),
+              actions: [
+                if (!_isLoading && _notifications.isNotEmpty)
+                  IconButton(
+                    tooltip: 'Tandai semua dibaca',
+                    onPressed: hasUnread && !_isMarkingAllAsRead
+                        ? _handleMarkAllAsRead
+                        : null,
+                    icon: _isMarkingAllAsRead
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.primary,
+                              ),
+                            ),
+                          )
+                        : Icon(
+                            Icons.done_all_rounded,
+                            color: hasUnread
+                                ? AppColors.primaryLight
+                                : AppColors.textMuted,
+                          ),
+                  ),
+              ],
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () => _fetchNotifications(refresh: true),
+                color: AppColors.primary,
+                backgroundColor: AppColors.surfaceElevated,
+                child: _buildBody(),
               ),
             ),
-        ],
-      ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () => _fetchNotifications(refresh: true),
-          color: AppColors.primary,
-          backgroundColor: AppColors.surfaceElevated,
-          child: _buildBody(),
+          ],
         ),
       ),
     );
@@ -228,7 +252,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const AppListSkeleton(itemCount: 6);
+      return const AppCardSkeletonList(
+        shape: AppCardSkeletonShape.notification,
+        itemCount: 5,
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppSpacing.xs,
+          AppSpacing.xl,
+          AppSpacing.xxl,
+        ),
+      );
     }
 
     if (_errorMessage != null) {
@@ -249,9 +282,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.sm,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.xs,
+        AppSpacing.xl,
+        AppSpacing.xxl,
       ),
       itemCount: _notifications.length + (_isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
@@ -274,6 +309,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         final notification = _notifications[index];
         return NotificationCard(
           notification: notification,
+          index: index,
           onTap: () => _handleNotificationTap(notification),
         );
       },

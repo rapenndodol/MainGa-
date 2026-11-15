@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_theme.dart';
 
 /// Skeleton box tunggal dengan animasi pulse tone surface -> surfaceElevated.
@@ -33,9 +34,10 @@ class _AppSkeletonBoxState extends State<AppSkeletonBox>
       duration: const Duration(milliseconds: 1100),
     );
 
-    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _animation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -65,15 +67,9 @@ class _AppSkeletonBoxState extends State<AppSkeletonBox>
           width: widget.width,
           height: widget.height,
           decoration: BoxDecoration(
-            color: Color.lerp(
-              AppColors.surface,
-              AppColors.surfaceElevated,
-              t,
-            ),
+            color: Color.lerp(AppColors.surface, AppColors.surfaceElevated, t),
             borderRadius: widget.borderRadius ?? AppRadius.smBorderRadius,
-            border: Border.all(
-              color: AppColors.border.withValues(alpha: 0.25),
-            ),
+            border: Border.all(color: AppColors.border.withValues(alpha: 0.25)),
           ),
         );
       },
@@ -183,6 +179,231 @@ class AppListSkeleton extends StatelessWidget {
   }
 }
 
+/// Bentuk skeleton kartu untuk layar Fase 3.
+enum AppCardSkeletonShape { library, wishlist, notification }
+
+/// Skeleton daftar kartu Fase 3 dengan proporsi yang mendekati kartu aslinya,
+/// sehingga perpindahan dari loading ke konten tidak terasa melompat.
+class AppCardSkeletonList extends StatelessWidget {
+  final AppCardSkeletonShape shape;
+  final int itemCount;
+  final EdgeInsetsGeometry padding;
+
+  const AppCardSkeletonList({
+    super.key,
+    required this.shape,
+    this.itemCount = 4,
+    this.padding = const EdgeInsets.fromLTRB(
+      AppSpacing.xl,
+      AppSpacing.xs,
+      AppSpacing.xl,
+      AppSpacing.xxl,
+    ),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: padding,
+      itemCount: itemCount,
+      itemBuilder: (_, index) => _buildCard(shape),
+    );
+  }
+
+  Widget _buildCard(AppCardSkeletonShape shape) {
+    switch (shape) {
+      case AppCardSkeletonShape.library:
+        return _surface(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AppSkeletonBox(
+                width: 84,
+                height: 118,
+                borderRadius: BorderRadius.all(Radius.circular(AppRadius.md)),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: SizedBox(
+                  height: 118,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          AppSkeletonBox(
+                            width: 84,
+                            height: 22,
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(AppRadius.full),
+                            ),
+                          ),
+                          AppSkeletonBox(
+                            width: 20,
+                            height: 20,
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(AppRadius.sm),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: AppSpacing.sm),
+                      AppSkeletonBox(width: double.infinity, height: 16),
+                      SizedBox(height: AppSpacing.xs),
+                      AppSkeletonBox(width: 150, height: 16),
+                      Spacer(),
+                      Row(
+                        children: [
+                          AppSkeletonBox(
+                            width: 58,
+                            height: 24,
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(AppRadius.full),
+                            ),
+                          ),
+                          SizedBox(width: AppSpacing.sm),
+                          AppSkeletonBox(
+                            width: 70,
+                            height: 24,
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(AppRadius.full),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      case AppCardSkeletonShape.wishlist:
+        return _surface(
+          child: Column(
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const AppSkeletonBox(
+                    width: 80,
+                    height: 104,
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(AppRadius.md),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: SizedBox(
+                      height: 104,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          AppSkeletonBox(width: double.infinity, height: 16),
+                          SizedBox(height: AppSpacing.sm),
+                          AppSkeletonBox(width: 150, height: 13),
+                          SizedBox(height: AppSpacing.sm),
+                          AppSkeletonBox(width: 180, height: 13),
+                          SizedBox(height: AppSpacing.sm),
+                          AppSkeletonBox(width: 110, height: 13),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: AppColors.border.withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  AppSkeletonBox(
+                    width: 130,
+                    height: 22,
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(AppRadius.full),
+                    ),
+                  ),
+                  AppSkeletonBox(
+                    width: 52,
+                    height: 28,
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(AppRadius.full),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      case AppCardSkeletonShape.notification:
+        return _surface(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AppSkeletonBox(
+                width: 52,
+                height: 52,
+                borderRadius: BorderRadius.all(Radius.circular(AppRadius.md)),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    AppSkeletonBox(width: 150, height: 15),
+                    SizedBox(height: AppSpacing.sm),
+                    AppSkeletonBox(width: double.infinity, height: 13),
+                    SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        AppSkeletonBox(
+                          width: 54,
+                          height: 18,
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(AppRadius.sm),
+                          ),
+                        ),
+                        SizedBox(width: AppSpacing.xs),
+                        AppSkeletonBox(
+                          width: 48,
+                          height: 18,
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(AppRadius.sm),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+    }
+  }
+
+  Widget _surface({required Widget child}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.lgBorderRadius,
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.65)),
+      ),
+      child: child,
+    );
+  }
+}
+
 /// Skeleton horizontal untuk carousel rekomendasi di Jelajah.
 class AppRecommendationSkeleton extends StatelessWidget {
   final double height;
@@ -201,8 +422,7 @@ class AppRecommendationSkeleton extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             padding: EdgeInsets.zero,
             itemCount: 2,
-            separatorBuilder: (_, _) =>
-                const SizedBox(width: AppSpacing.md),
+            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
             itemBuilder: (_, _) {
               return Container(
                 width: cardWidth,

@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_confirm_dialog.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_error_state.dart';
+import '../../../../core/widgets/app_filter_chip_bar.dart';
 import '../../../../core/widgets/app_loading_skeleton.dart';
+import '../../../../core/widgets/app_screen_header.dart';
+import '../../../../core/widgets/game_hero_tag.dart';
 import '../../../games/data/models/game_model.dart';
 import '../../../games/presentation/screens/game_detail_screen.dart';
 import '../../data/datasources/wishlist_remote_data_source.dart';
@@ -29,6 +34,17 @@ class _WishlistScreenState extends State<WishlistScreen> {
   int _lastPage = 1;
   int _total = 0;
   bool? _filterAktif; // null: semua, true: aktif saja, false: nonaktif saja
+
+  static const List<String> _filterOptions = [
+    'Semua',
+    'Pantauan Aktif',
+    'Nonaktif',
+  ];
+
+  String get _selectedFilter {
+    if (_filterAktif == null) return 'Semua';
+    return _filterAktif! ? 'Pantauan Aktif' : 'Nonaktif';
+  }
 
   @override
   void initState() {
@@ -160,47 +176,14 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 
   Future<void> _confirmDelete(WishlistItemModel item) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceElevated,
-        shape: RoundedRectangleBorder(
-          borderRadius: AppRadius.lgBorderRadius,
-          side: const BorderSide(color: AppColors.border),
-        ),
-        title: Text(
-          'Hapus dari Wishlist?',
-          style: AppTypography.titleMedium.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        content: Text(
-          'Game "${item.judul}" akan dihapus dari daftar wishlist Anda.',
-          style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'Batal',
-              style: AppTypography.labelMedium.copyWith(color: AppColors.textMuted),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: AppColors.textPrimary,
-              shape: RoundedRectangleBorder(borderRadius: AppRadius.mdBorderRadius),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+    final confirmed = await AppConfirmDialog.show(
+      context,
+      title: 'Hapus dari Wishlist?',
+      message: 'Game "${item.judul}" akan dihapus dari daftar wishlist Anda.',
+      confirmText: 'Hapus',
     );
 
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     final res = await _wishlistDataSource.deleteWishlist(id: item.id);
     if (!mounted) return;
@@ -211,16 +194,15 @@ class _WishlistScreenState extends State<WishlistScreen> {
         _total = (_total - 1).clamp(0, 99999);
       });
 
-      WishlistNotifier.instance.notifyDeleted(
-        item.id,
-        gameId: item.gameId,
-      );
+      WishlistNotifier.instance.notifyDeleted(item.id, gameId: item.gameId);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             res['message'] ?? 'Game berhasil dihapus dari wishlist',
-            style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary),
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textPrimary,
+            ),
           ),
           backgroundColor: AppColors.surfaceElevated,
           behavior: SnackBarBehavior.floating,
@@ -238,7 +220,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 
   void _openDetail(WishlistItemModel item) {
-    final gameModel = item.game ??
+    final gameModel =
+        item.game ??
         GameModel(
           id: item.gameId,
           rawgId: item.game?.rawgId ?? item.gameId,
@@ -256,60 +239,58 @@ class _WishlistScreenState extends State<WishlistScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => GameDetailScreen(game: gameModel),
+        builder: (_) => GameDetailScreen(
+          game: gameModel,
+          heroTag: gameCoverHeroTag(gameModel, 'wishlist'),
+        ),
       ),
     ).then((_) {
-      _fetchWishlist(refresh: true);
+      if (mounted) _fetchWishlist(refresh: true);
     });
+  }
+
+  String get _subtitle {
+    if (_isLoading) return 'Memuat daftar incaran...';
+    if (_selectedFilter != 'Semua') {
+      return '$_total game · filter $_selectedFilter.';
+    }
+    if (_total > 0) {
+      return '$_total game dipantau · harga terbaik otomatis.';
+    }
+    return 'Simpan incaran, tetapkan target, biarkan harga yang mengejar.';
+  }
+
+  void _onFilterSelected(String label) {
+    final bool? value = switch (label) {
+      'Pantauan Aktif' => true,
+      'Nonaktif' => false,
+      _ => null,
+    };
+    if (_filterAktif == value) return;
+    setState(() {
+      _filterAktif = value;
+    });
+    _fetchWishlist(refresh: true);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        title: Text(
-          'Wishlist Incaran',
-          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: false,
-        automaticallyImplyLeading: false,
-        backgroundColor: AppColors.bg,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        actions: [
-          if (_total > 0 && !_isLoading)
-            Padding(
-              padding: const EdgeInsets.only(right: AppSpacing.lg),
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryContainer,
-                    borderRadius: AppRadius.fullBorderRadius,
-                    border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Text(
-                    '$_total game',
-                    style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.primaryLight,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
-            // ── Filter Chip Aktif / Semua ─────────────────────────
-            _buildFilterBar(),
-
-            // ── Konten Utama ─────────────────────────────────────
+            AppScreenHeader(
+              eyebrow: 'Daftar incaran',
+              title: 'Wishlist Incaran',
+              subtitle: _subtitle,
+              footer: AppFilterChipBar(
+                options: _filterOptions,
+                selected: _selectedFilter,
+                onSelected: _onFilterSelected,
+              ),
+            ),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () => _fetchWishlist(refresh: true),
@@ -324,60 +305,12 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
   }
 
-  Widget _buildFilterBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.xs,
-      ),
-      margin: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: Row(
-        children: [
-          _buildFilterChip('Semua', null),
-          const SizedBox(width: AppSpacing.sm),
-          _buildFilterChip('Pantauan Aktif', true),
-          const SizedBox(width: AppSpacing.sm),
-          _buildFilterChip('Nonaktif', false),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChip(String label, bool? value) {
-    final bool isSelected = _filterAktif == value;
-    return GestureDetector(
-      onTap: () {
-        if (_filterAktif == value) return;
-        setState(() {
-          _filterAktif = value;
-        });
-        _fetchWishlist(refresh: true);
-      },
-      child: AnimatedContainer(
-        duration: AppMotion.fast,
-        curve: AppMotion.curve,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : AppColors.surfaceElevated,
-          borderRadius: AppRadius.fullBorderRadius,
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border,
-          ),
-        ),
-        child: Text(
-          label,
-          style: AppTypography.labelSmall.copyWith(
-            color: isSelected ? AppColors.onPrimary : AppColors.textSecondary,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildBody() {
     if (_isLoading) {
-      return _buildLoadingSkeleton();
+      return const AppCardSkeletonList(
+        shape: AppCardSkeletonShape.wishlist,
+        itemCount: 4,
+      );
     }
 
     if (_errorMessage != null) {
@@ -394,8 +327,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
           child: AppEmptyState(
             icon: Icons.favorite_rounded,
             title: 'Belum ada game di wishlist',
-            description:
-                'Daftar game incaran dengan target harga akan muncul di sini. Buka tab Jelajah untuk mulai mencari game yang ingin dipantau.',
+            description: 'Daftar game incaran dengan target harga akan muncul di sini. Buka tab Jelajah untuk mulai mencari game yang ingin dipantau.',
           ),
         ),
       );
@@ -405,10 +337,10 @@ class _WishlistScreenState extends State<WishlistScreen> {
       controller: _scrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        100.0, // Memberikan ruang ekstra untuk floating bottom navigation bar
+        AppSpacing.xl,
+        AppSpacing.xs,
+        AppSpacing.xl,
+        108.0, // Ruang untuk floating bottom dock
       ),
       itemCount: _items.length + (_isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
@@ -417,8 +349,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
             padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
             child: Center(
               child: SizedBox(
-                width: 24,
-                height: 24,
+                width: 22,
+                height: 22,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   color: AppColors.primary,
@@ -441,20 +373,24 @@ class _WishlistScreenState extends State<WishlistScreen> {
             margin: const EdgeInsets.only(bottom: AppSpacing.md),
             padding: const EdgeInsets.only(right: AppSpacing.xl),
             decoration: BoxDecoration(
-              color: AppColors.error.withValues(alpha: 0.85),
+              color: AppColors.error.withValues(alpha: 0.9),
               borderRadius: AppRadius.lgBorderRadius,
             ),
             alignment: Alignment.centerRight,
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Icon(Icons.delete_outline_rounded, color: AppColors.textPrimary, size: 24),
-                SizedBox(width: 8),
+                Icon(
+                  Icons.delete_outline_rounded,
+                  color: AppColors.textPrimary,
+                  size: 22,
+                ),
+                SizedBox(width: AppSpacing.sm),
                 Text(
                   'Hapus',
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -462,63 +398,13 @@ class _WishlistScreenState extends State<WishlistScreen> {
           ),
           child: WishlistGameCard(
             item: item,
+            index: index,
             onTap: () => _openDetail(item),
             onToggleActive: (newVal) => _toggleActive(item, newVal),
             onDelete: () => _confirmDelete(item),
           ),
         );
       },
-    );
-  }
-
-  Widget _buildLoadingSkeleton() {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        AppSpacing.xxl,
-      ),
-      itemCount: 4,
-      itemBuilder: (context, index) => Container(
-        margin: const EdgeInsets.only(bottom: AppSpacing.md),
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.lgBorderRadius,
-          border: Border.all(color: AppColors.border),
-        ),
-        child: const Column(
-          children: [
-            Row(
-              children: [
-                AppSkeletonBox(width: 80, height: 104),
-                SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AppSkeletonBox(width: double.infinity, height: 16),
-                      SizedBox(height: 8),
-                      AppSkeletonBox(width: 140, height: 14),
-                      SizedBox(height: 8),
-                      AppSkeletonBox(width: 100, height: 14),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: AppSpacing.md),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                AppSkeletonBox(width: 120, height: 20),
-                AppSkeletonBox(width: 60, height: 24),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
