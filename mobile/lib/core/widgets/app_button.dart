@@ -74,6 +74,8 @@ class _AppButtonState extends State<AppButton> {
 
     final bool isDisabled = widget.onPressed == null;
     final bool isBusy = isDisabled || widget.isLoading;
+    final bool reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
     return Semantics(
       button: true,
@@ -83,8 +85,8 @@ class _AppButtonState extends State<AppButton> {
         width: widget.width,
         height: widget.height,
         child: AnimatedScale(
-          scale: _pressed && !isBusy ? 0.98 : 1.0,
-          duration: AppMotion.fast,
+          scale: _pressed && !isBusy && !reduceMotion ? 0.98 : 1.0,
+          duration: reduceMotion ? Duration.zero : AppMotion.fast,
           curve: AppMotion.curve,
           child: Material(
             color: isDisabled

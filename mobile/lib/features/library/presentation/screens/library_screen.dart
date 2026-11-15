@@ -207,7 +207,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
     if (_errorMessage != null) {
       return AppErrorState(
-        title: 'Gagal Memuat Library',
+        title: 'Gagal memuat library',
         message: _errorMessage!,
         onRetry: () => _fetchLibrary(refresh: true),
       );
@@ -224,7 +224,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         AppSpacing.xl,
         AppSpacing.xs,
         AppSpacing.xl,
-        108.0, // Ruang untuk floating bottom dock
+        AppSpacing.bottomDock,
       ),
       itemCount: _entries.length + (_isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {

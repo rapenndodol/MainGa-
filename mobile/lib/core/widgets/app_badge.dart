@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_theme.dart';
 
 enum AppBadgeVariant { neutral, primary, secondary, warning, success, error }
@@ -85,15 +86,12 @@ class AppBadge extends StatelessWidget {
         borderRadius: AppRadius.fullBorderRadius,
         border: Border.all(color: borderColor, width: 1),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: compact ? 12 : 14, color: textColor),
-            const SizedBox(width: AppSpacing.xs),
-          ],
-          Text(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final Widget labelWidget = Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: AppTypography.tabular(
               AppTypography.labelSmall.copyWith(
                 color: textColor,
@@ -101,8 +99,24 @@ class AppBadge extends StatelessWidget {
                 fontSize: compact ? 11 : 12,
               ),
             ),
-          ),
-        ],
+          );
+
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: compact ? 12 : 14, color: textColor),
+                const SizedBox(width: AppSpacing.xs),
+              ],
+              // Label dipangkas hanya saat badge mendapat lebar terbatas,
+              // mis. di dalam Wrap metadata detail game.
+              if (constraints.hasBoundedWidth)
+                Flexible(child: labelWidget)
+              else
+                labelWidget,
+            ],
+          );
+        },
       ),
     );
   }

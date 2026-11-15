@@ -23,6 +23,9 @@ class AppSpacing {
   /// Padding horizontal standar layar.
   static const double screen = xl;
 
+  /// Ruang bawah agar konten tidak tertutup floating navigation dock.
+  static const double bottomDock = 108.0;
+
   // ── Insets umum ──────────────────────────────────────────────
   static const EdgeInsets allXs = EdgeInsets.all(xs);
   static const EdgeInsets allSm = EdgeInsets.all(sm);

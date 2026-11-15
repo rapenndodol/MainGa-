@@ -266,7 +266,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     if (_errorMessage != null) {
       return AppErrorState(
-        title: 'Gagal Memuat Notifikasi',
+        title: 'Gagal memuat notifikasi',
         message: _errorMessage!,
         onRetry: () => _fetchNotifications(refresh: true),
       );

@@ -68,9 +68,11 @@ class AppStatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = AppStatusHelper.getStatusColor(status);
     final icon = AppStatusHelper.getStatusIcon(status);
+    final bool reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
     final content = AnimatedContainer(
-      duration: AppMotion.base,
+      duration: reduceMotion ? Duration.zero : AppMotion.base,
       curve: AppMotion.curve,
       padding: EdgeInsets.symmetric(
         horizontal: compact ? AppSpacing.sm : AppSpacing.md,

@@ -7,6 +7,7 @@ import '../../../../core/widgets/app_badge.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_error_state.dart';
+import '../../../../core/widgets/app_filter_chip_bar.dart';
 import '../../../../core/widgets/app_game_card.dart';
 import '../../../../core/widgets/app_loading_skeleton.dart';
 import '../../../../core/widgets/app_rawg_attribution.dart';
@@ -479,6 +480,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   children: [
                     Text(
                       'Jelajah Game',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: AppTypography.displayMedium.copyWith(
                         fontSize: 30,
                         letterSpacing: -0.9,
@@ -487,6 +490,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     const SizedBox(height: AppSpacing.xxs + 1),
                     Text(
                       'Temukan judul berikutnya untuk koleksimu.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: AppTypography.bodySmall.copyWith(
                         color: AppColors.textSecondary,
                       ),
@@ -628,60 +633,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
           ),
           const SizedBox(height: AppSpacing.md),
 
-          SizedBox(
-            height: 48,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.zero,
-              itemCount: _genres.length + 1,
-              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-              itemBuilder: (context, index) {
-                final String genreName = index == 0
-                    ? 'Semua'
-                    : _genres[index - 1].nama;
-                final bool isSelected = _selectedGenre == genreName;
-
-                return Center(
-                  child: ChoiceChip(
-                    label: Text(genreName),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      if (selected) {
-                        setState(() => _selectedGenre = genreName);
-                        _fetchGames(resetPage: true);
-                      }
-                    },
-                    selectedColor: AppColors.white,
-                    backgroundColor: AppColors.surface,
-                    labelStyle: AppTypography.labelSmall.copyWith(
-                      color: isSelected
-                          ? AppColors.onSecondary
-                          : AppColors.textSecondary,
-                      fontWeight: isSelected
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                    ),
-                    labelPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xs,
-                      vertical: AppSpacing.xs,
-                    ),
-                    side: BorderSide(
-                      color: isSelected ? AppColors.white : AppColors.border,
-                      width: 1,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.fullBorderRadius,
-                    ),
-                    showCheckmark: false,
-                    materialTapTargetSize: MaterialTapTargetSize.padded,
-                    visualDensity: VisualDensity.compact,
-                  ),
-                );
-              },
-            ),
+          AppFilterChipBar(
+            options: ['Semua', ..._genres.map((genre) => genre.nama)],
+            selected: _selectedGenre,
+            onSelected: (genre) {
+              if (genre == _selectedGenre) return;
+              setState(() => _selectedGenre = genre);
+              _fetchGames(resetPage: true);
+            },
           ),
           const SizedBox(height: AppSpacing.sm),
           Container(height: 1, color: AppColors.border.withValues(alpha: 0.55)),
@@ -699,14 +658,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
           AppSpacing.md,
           AppSpacing.md,
           AppSpacing.md,
-          96.0,
+          AppSpacing.bottomDock,
         ),
       );
     }
 
     if (_errorMessage != null) {
       return AppErrorState(
-        title: 'Gagal Memuat Game',
+        title: 'Gagal memuat game',
         message: _errorMessage!,
         onRetry: () => _fetchGames(resetPage: true),
       );
@@ -715,7 +674,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     if (_games.isEmpty) {
       return AppEmptyState(
         icon: Icons.sports_esports_outlined,
-        title: 'Tidak Ada Game Ditemukan',
+        title: 'Tidak ada game ditemukan',
         description: 'Coba ubah kata kunci pencarian atau sesuaikan opsi filter genre dan rating.',
         actionText:
             (_searchController.text.isNotEmpty ||
@@ -755,7 +714,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         AppSpacing.md,
         AppSpacing.xs,
         AppSpacing.md,
-        96.0,
+        AppSpacing.bottomDock,
       ),
       itemCount: totalItems,
       itemBuilder: (context, index) {
@@ -952,6 +911,9 @@ class _RecommendationCarouselState extends State<_RecommendationCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final bool reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
     return Column(
       children: [
         SizedBox(
@@ -982,7 +944,7 @@ class _RecommendationCarouselState extends State<_RecommendationCarousel> {
               children: List<Widget>.generate(widget.games.length, (index) {
                 final bool isActive = index == _currentPage;
                 return AnimatedContainer(
-                  duration: AppMotion.fast,
+                  duration: reduceMotion ? Duration.zero : AppMotion.fast,
                   curve: AppMotion.curve,
                   margin: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.xxs + 1,

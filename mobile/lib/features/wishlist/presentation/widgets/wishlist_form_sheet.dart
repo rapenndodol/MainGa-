@@ -194,7 +194,7 @@ class _WishlistFormSheetState extends State<WishlistFormSheet> {
       context,
       title: 'Hapus dari Wishlist?',
       message:
-          'Game "${widget.game.judul}" akan dihapus dari daftar pantauan wishlist Anda.',
+          'Game "${widget.game.judul}" akan dihapus dari daftar pantauan wishlist kamu.',
       confirmText: 'Hapus',
     );
 

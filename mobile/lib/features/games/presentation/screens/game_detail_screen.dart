@@ -211,6 +211,8 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                   // ── Judul & Metadata Utama ─────────────────────
                   Text(
                     _game.judul,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTypography.displayMedium.copyWith(
                       fontSize: 30,
                       fontWeight: FontWeight.w800,
@@ -557,24 +559,23 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: _openLibraryForm,
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
+                const Icon(
                   Icons.bookmark_add_outlined,
                   size: 18,
                   color: AppColors.onPrimary,
                 ),
-                SizedBox(width: AppSpacing.xs + 2),
+                const SizedBox(width: AppSpacing.xs + 2),
                 Flexible(
                   child: Text(
                     'Ke Library',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.5,
+                    style: AppTypography.labelMedium.copyWith(
                       fontWeight: FontWeight.w800,
                       color: AppColors.onPrimary,
                     ),
@@ -632,24 +633,23 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
         ),
         child: InkWell(
           onTap: _openWishlistForm,
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
+                const Icon(
                   Icons.favorite_border_rounded,
                   size: 18,
                   color: AppColors.primaryLight,
                 ),
-                SizedBox(width: AppSpacing.xs + 2),
+                const SizedBox(width: AppSpacing.xs + 2),
                 Flexible(
                   child: Text(
                     'Tambah ke Wishlist',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
+                    style: AppTypography.labelMedium.copyWith(
                       fontWeight: FontWeight.w800,
                       color: AppColors.primaryLight,
                     ),
@@ -737,6 +737,14 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
   }
 
   Widget _buildSimilarGamesSection() {
+    final double textScale = MediaQuery.textScalerOf(context)
+        .scale(1.0)
+        .clamp(1.0, 1.6)
+        .toDouble();
+    // Tinggi carousel bertambah mengikuti text scale agar judul dan genre
+    // di bawah cover tidak terpotong pada 360dp + text scale 1.3.
+    final double carouselHeight = 226 + (textScale - 1.0) * 40;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -751,7 +759,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
         ),
         const SizedBox(height: AppSpacing.md),
         SizedBox(
-          height: 226,
+          height: carouselHeight,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),

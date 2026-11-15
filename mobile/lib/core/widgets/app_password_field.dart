@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_theme.dart';
 import 'app_text_field.dart';
 
@@ -41,8 +42,11 @@ class _AppPasswordFieldState extends State<AppPasswordField> {
 
   @override
   Widget build(BuildContext context) {
-    final String semanticLabel =
-        _obscure ? 'Tampilkan password' : 'Sembunyikan password';
+    final String semanticLabel = _obscure
+        ? 'Tampilkan password'
+        : 'Sembunyikan password';
+    final bool reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
     return AppTextField(
       controller: widget.controller,
@@ -68,7 +72,7 @@ class _AppPasswordFieldState extends State<AppPasswordField> {
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
           icon: AnimatedSwitcher(
-            duration: AppMotion.fast,
+            duration: reduceMotion ? Duration.zero : AppMotion.fast,
             switchInCurve: AppMotion.curve,
             switchOutCurve: AppMotion.reverseCurve,
             child: Icon(

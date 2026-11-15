@@ -23,7 +23,7 @@ class NotificationCard extends StatelessWidget {
       final dateTime = DateTime.parse(dateStr).toLocal();
       final diff = DateTime.now().difference(dateTime);
       if (diff.inSeconds < 60) return 'Baru saja';
-      if (diff.inMinutes < 60) return '${diff.inMinutes} m lalu';
+      if (diff.inMinutes < 60) return '${diff.inMinutes} menit lalu';
       if (diff.inHours < 24) return '${diff.inHours} jam lalu';
       if (diff.inDays == 1) return 'Kemarin';
       if (diff.inDays < 7) return '${diff.inDays} hari lalu';
@@ -231,6 +231,8 @@ class NotificationCard extends StatelessWidget {
       ),
       child: Text(
         text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: AppTypography.tabular(
           AppTypography.labelSmall.copyWith(
             fontSize: 10,

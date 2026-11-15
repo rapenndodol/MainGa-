@@ -179,7 +179,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
     final confirmed = await AppConfirmDialog.show(
       context,
       title: 'Hapus dari Wishlist?',
-      message: 'Game "${item.judul}" akan dihapus dari daftar wishlist Anda.',
+      message: 'Game "${item.judul}" akan dihapus dari daftar wishlist kamu.',
       confirmText: 'Hapus',
     );
 
@@ -340,7 +340,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
         AppSpacing.xl,
         AppSpacing.xs,
         AppSpacing.xl,
-        108.0, // Ruang untuk floating bottom dock
+        AppSpacing.bottomDock,
       ),
       itemCount: _items.length + (_isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {

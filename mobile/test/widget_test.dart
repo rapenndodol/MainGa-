@@ -769,6 +769,49 @@ void main() {
       expect(find.byIcon(Icons.star_rounded), findsOneWidget);
     });
 
+    testWidgets('AppBadge truncates a long label in a narrow layout', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const TestWrapper(
+          child: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 120,
+                child: AppBadge(
+                  label: 'Genre yang sangat panjang sekali',
+                  icon: Icons.sports_esports_rounded,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Genre yang sangat panjang sekali'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('AppButton disables press animation when reduce motion is on', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        TestWrapper(
+          child: Scaffold(
+            body: MediaQuery(
+              data: const MediaQueryData(disableAnimations: true),
+              child: AppButton(text: 'Aksi Utama', onPressed: () {}),
+            ),
+          ),
+        ),
+      );
+
+      final animatedScale = tester.widget<AnimatedScale>(
+        find.descendant(
+          of: find.byType(AppButton),
+          matching: find.byType(AnimatedScale),
+        ),
+      );
+      expect(animatedScale.duration, Duration.zero);
+      expect(animatedScale.scale, 1.0);
+    });
+
     // ── US-04 & US-05: WishlistGameCard Widget Test ────────────
     testWidgets('WishlistGameCard renders card elements and target reached status correctly', (WidgetTester tester) async {
       bool tapped = false;

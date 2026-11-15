@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../../../core/theme/app_theme.dart';
 
 /// Navigation dock mengambang dengan indikator lime yang bergeser halus.
@@ -40,6 +41,9 @@ class FloatingNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
     return SafeArea(
       top: false,
       minimum: const EdgeInsets.only(bottom: AppSpacing.lg),
@@ -68,7 +72,7 @@ class FloatingNavBar extends StatelessWidget {
               return Stack(
                 children: [
                   AnimatedPositioned(
-                    duration: AppMotion.base,
+                    duration: reduceMotion ? Duration.zero : AppMotion.base,
                     curve: AppMotion.curve,
                     left: itemWidth * currentIndex + AppSpacing.xs,
                     top: AppSpacing.sm,
@@ -82,19 +86,18 @@ class FloatingNavBar extends StatelessWidget {
                     ),
                   ),
                   Row(
-                    children: List<Widget>.generate(
-                      _destinations.length,
-                      (int index) {
-                        final bool isSelected = currentIndex == index;
-                        return Expanded(
-                          child: _NavItem(
-                            destination: _destinations[index],
-                            isSelected: isSelected,
-                            onTap: () => onSelected(index),
-                          ),
-                        );
-                      },
-                    ),
+                    children: List<Widget>.generate(_destinations.length, (
+                      int index,
+                    ) {
+                      final bool isSelected = currentIndex == index;
+                      return Expanded(
+                        child: _NavItem(
+                          destination: _destinations[index],
+                          isSelected: isSelected,
+                          onTap: () => onSelected(index),
+                        ),
+                      );
+                    }),
                   ),
                 ],
               );
@@ -119,8 +122,9 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color foreground =
-        isSelected ? AppColors.onPrimary : AppColors.textMuted;
+    final Color foreground = isSelected
+        ? AppColors.onPrimary
+        : AppColors.textMuted;
 
     return Semantics(
       button: true,
@@ -152,8 +156,7 @@ class _NavItem extends StatelessWidget {
                   style: AppTypography.labelSmall.copyWith(
                     fontSize: 10.5,
                     height: 1.1,
-                    fontWeight:
-                        isSelected ? FontWeight.w800 : FontWeight.w500,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
                     color: foreground,
                   ),
                 ),

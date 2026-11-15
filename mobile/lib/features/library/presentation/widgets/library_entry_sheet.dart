@@ -328,15 +328,20 @@ class _LibraryEntrySheetState extends State<LibraryEntrySheet> {
                 ),
                 if (_ratingPribadi != null) ...[
                   const SizedBox(width: AppSpacing.sm),
-                  GestureDetector(
-                    onTap: () => setState(() => _ratingPribadi = null),
-                    child: Text(
-                      'Hapus Rating',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.error,
+                  TextButton(
+                    onPressed: () => setState(() => _ratingPribadi = null),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      minimumSize: const Size(48, 48),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                      ),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      textStyle: AppTypography.labelSmall.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                    child: const Text('Hapus Rating'),
                   ),
                 ],
               ],

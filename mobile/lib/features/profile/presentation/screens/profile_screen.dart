@@ -110,8 +110,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _handleLogout() async {
     final confirm = await AppConfirmDialog.show(
       context,
-      title: 'Konfirmasi Logout',
-      message: 'Apakah kamu yakin ingin keluar dari akun MainGa??',
+      title: 'Keluar dari akun?',
+      message: 'Apakah kamu yakin ingin keluar dari akun MainGa?',
       confirmText: 'Keluar',
       icon: Icons.logout_rounded,
     );
@@ -163,7 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     AppSpacing.xl,
                     AppSpacing.xs,
                     AppSpacing.xl,
-                    108.0, // Ruang untuk floating bottom navigation dock
+                    AppSpacing.bottomDock,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -391,7 +391,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Gagal Memuat Statistik',
+              'Gagal memuat statistik',
               style: AppTypography.titleSmall.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w700,
@@ -476,7 +476,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Belum ada data. Tambahkan game ke library untuk melihat statistikmu.',
+            'Tambahkan game ke library untuk melihat statistikmu.',
             textAlign: TextAlign.center,
             style: AppTypography.bodySmall.copyWith(
               color: AppColors.textSecondary,

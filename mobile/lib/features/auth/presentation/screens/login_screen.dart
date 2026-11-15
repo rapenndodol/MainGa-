@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/storage/token_storage.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_button.dart';
@@ -65,9 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => HomeScreen(user: result.user),
-        ),
+        MaterialPageRoute(builder: (context) => HomeScreen(user: result.user)),
       );
       return;
     }
@@ -78,8 +77,8 @@ class _LoginScreenState extends State<LoginScreen> {
       _serverErrors = fieldErrors;
       _errorMessage = fieldErrors.isEmpty
           ? (result.message.isNotEmpty
-              ? result.message
-              : 'Login gagal. Periksa kembali email dan password Anda.')
+                ? result.message
+                : 'Login gagal. Periksa kembali email dan password kamu.')
           : null;
     });
     _formKey.currentState?.validate();
@@ -104,7 +103,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return AuthPageShell(
       title: 'MainGa?',
-      subtitle: 'Kelola koleksi, susun backlog, dan pantau diskon game '
+      subtitle:
+          'Kelola koleksi, susun backlog, dan pantau diskon game '
           'impianmu dalam satu tempat.',
       children: [
         AutofillGroup(
@@ -130,8 +130,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (val == null || val.trim().isEmpty) {
                       return 'Email wajib diisi';
                     }
-                    final emailRegex =
-                        RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                    final emailRegex = RegExp(
+                      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                    );
                     if (!emailRegex.hasMatch(val.trim())) {
                       return 'Format email tidak valid';
                     }

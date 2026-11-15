@@ -352,25 +352,27 @@ class _RandomGameSheetState extends State<RandomGameSheet> {
                     Row(
                       children: [
                         if (genre.isNotEmpty) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceElevated,
-                              borderRadius: AppRadius.fullBorderRadius,
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: Text(
-                              genre,
-                              style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.secondary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceElevated,
+                                borderRadius: AppRadius.fullBorderRadius,
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Text(
+                                genre,
+                                style: AppTypography.labelSmall.copyWith(
+                                  color: AppColors.secondary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ),
                           const SizedBox(width: AppSpacing.sm),

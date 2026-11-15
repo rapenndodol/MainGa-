@@ -531,6 +531,55 @@ Phase 3 menutup sisa layar utama dengan bahasa visual yang sama seperti Explore 
 
 ---
 
+## ✅ Pembaruan UI Modern - Phase 4: Penyempurnaan, Aksesibilitas & Verifikasi Akhir
+
+Phase 4 adalah sapuan akhir atas seluruh bahasa desain Phase 1–3. Fokusnya bukan arah visual baru, melainkan konsistensi lintas layar, aksesibilitas, ketahanan layout pada **360dp + text scale 1.3**, dan verifikasi bahwa tidak ada perilaku aplikasi yang berubah. Tidak ada perubahan pada backend, endpoint API, model, data source, notifier, autentikasi, validasi, parsing, maupun aturan bisnis.
+
+### 1. Ringkasan Perubahan
+
+- **Konsistensi lintas layar**:
+  - Token `AppSpacing.bottomDock` (108dp) menggantikan angka ajaib `96.0`/`108.0` pada Explore, Library, Wishlist, dan Profil sehingga jarak gulir di atas *floating dock* seragam.
+  - Explore kini memakai `AppFilterChipBar` bersama seperti Library dan Wishlist; baris `ChoiceChip` duplikat dihapus sehingga gaya chip, target sentuh 48dp, haptic, dan status terpilih mengikuti satu sumber.
+  - Judul state galat/kosong diseragamkan ke *sentence case* (`Gagal memuat game`, `Gagal memuat library`, `Gagal memuat notifikasi`, `Gagal memuat statistik`, `Tidak ada game ditemukan`).
+- **Aksesibilitas**:
+  - Guard `MediaQuery.disableAnimations` dilengkapi pada `AppButton`, `AppStatusChip`, `FloatingNavBar`, `AppGameCard`, `AppPasswordField`, dan indikator titik carousel Explore. Saat reduce motion aktif, durasi menjadi `Duration.zero` dan skala tekan dikembalikan ke `1.0` agar tidak tersangkut dalam state mengecil.
+  - Aksi **Hapus Rating** yang sebelumnya berupa `GestureDetector` teks kini `TextButton` dengan target sentuh minimal 48dp dan padding yang layak.
+  - `AppBadge` memakai `LayoutBuilder`: label dipangkas dengan ellipsis hanya saat lebar terbatas, sementara ukuran intrinsik tetap dipertahankan di konteks `Wrap`/unbounded.
+  - Chip meta kartu notifikasi memakai `maxLines: 1` + ellipsis agar metadata panjang tidak mendorong tata letak.
+- **Ketahanan layout 360dp + text scale 1.3**:
+  - Judul dan subtitle header Explore dibatasi dua baris dengan ellipsis.
+  - Judul game di Detail dibatasi tiga baris; label aksi **Ke Library** dan **Tambah ke Wishlist** memakai `AppTypography.labelMedium` agar konsisten dan tidak terpotong.
+  - Tinggi carousel **Game Serupa** ikut bertambah mengikuti text scale sehingga judul/genre di bawah cover tetap terbaca.
+  - Chip genre pada sheet Acak Game dibungkus `Flexible`; `AppBadge` dan chip notifikasi aman pada lebar sempit.
+- **Konsistensi copy**:
+  - Sapaan pengguna diseragamkan ke **kamu** (Login, dialog hapus Wishlist, dan konfirmasi logout).
+  - Dialog logout memakai judul **Keluar dari akun?** dan satu tanda tanya; empty state statistik tidak lagi mengulang kalimat yang sama.
+  - Waktu relatif notifikasi memakai **menit lalu**, bukan singkatan `m lalu`.
+
+### 2. Keputusan Kecil Lintas Fase
+
+1. **Token, Bukan Angka Ajaib**: `bottomDock` menjadi satu-satunya sumber jarak aman di atas dock; Explore yang sebelumnya memakai 96dp diselaraskan ke 108dp agar ritme keempat tab sama.
+2. **Satu Komponen Chip**: Explore melepas styling `ChoiceChip` lokal dan memakai `AppFilterChipBar`, sehingga perilaku filter tidak lagi bercabang antar layar.
+3. **Reduce Motion yang Tuntas**: Guard tidak hanya memperpendek durasi, tetapi juga menetralkan nilai skala/posisi akhir agar elemen tidak tertinggal dalam state animasi.
+4. **Truncation yang Kontekstual**: `AppBadge` hanya menjadi `Flexible` ketika lebar benar-benar terbatas; di konteks bebas badge tetap seukuran konten sehingga tidak mengecil tanpa alasan.
+5. **Aksi Teks Tetap 48dp**: Mengganti `GestureDetector` dengan `TextButton` menghilangkan target sentuh kecil tanpa menambah komponen visual baru.
+6. **Tipografi Aksi Detail**: Label aksi memakai token `labelMedium` alih-alih ukuran font lokal, menjaga hierarki yang sama dengan tombol lain.
+7. **Copy Manusiawi, Bukan Jargon**: “kamu”, sentence case, dan “menit lalu” dipilih agar suara aplikasi konsisten; istilah teknis yang sudah disepakati (`estimasi`, `USD`, `Harga belum tersedia`, `Riwayat belum cukup untuk grafik`, `Data by RAWG`) tetap dipertahankan.
+8. **Fase 1–3 Tidak Didesain Ulang**: Tidak ada perubahan palet, radius, bentuk, atau susunan layar besar; Phase 4 hanya menyentuh konsistensi, aksesibilitas, overflow, copy, dan pengujian.
+9. **Sejarah Arah Visual**: Eksplorasi awal **Warm Obsidian/Coral** (coral `#E14B44`, permukaan cokelat gelap) tidak lagi digunakan dan disimpan sebagai sejarah; acuan resmi tetap palet **Hitam–Putih–Lime (60-30-10)** di `app_colors.dart`.
+
+### 3. Verifikasi Phase 4
+
+- `flutter analyze` → **No issues found** (0 error, 0 warning, 0 hint).
+- `flutter test` → **47 passed, 0 failed** (baseline 45 test lama + 2 tes baru: truncation `AppBadge` pada layout sempit dan reduce-motion `AppButton`).
+- `mobile/lib/core/theme/app_colors.dart` tetap byte-identik; git blob hash `a9f7333d5939236af642f9dfecca46fa781bb380`.
+- Tidak ada diff pada `backend/`, `mobile/lib/**/data/`, `core/constants/`, `core/storage/`, maupun file notifier; `pubspec.yaml`/`pubspec.lock` tidak berubah.
+- Tidak ada `Color(0x...)` atau `Colors.*` di luar `app_colors.dart`, dan tidak ada hex lama (`E14B44`, `140C0F`, `1E1216`, `29171E`, `1A1014`, `8B5CF6`, `2E2A48`) di kode aplikasi.
+- Audit layout dilakukan pada 360dp dengan text scale 1.3; temuan overflow, target sentuh, dan copy sudah diperbaiki sebelum verifikasi akhir.
+- Ringkasan Phase 1–3 di atas tetap dipertahankan sebagai riwayat; Phase 4 menutup rangkaian Pembaruan UI Modern tanpa commit fitur baru.
+
+---
+
 ## 🚀 Cara Menjalankan & Menguji Aplikasi
 
 ### 1. Backend (Laravel)
@@ -548,7 +597,7 @@ flutter analyze
 flutter test
 flutter run
 ```
-*Hasil pengujian saat ini: `flutter analyze` 0 issues (bersih), dan `flutter test` 45 tests passed (100% lulus).*
+*Hasil pengujian saat ini: `flutter analyze` 0 issues (bersih), dan `flutter test` 47 tests passed (100% lulus).*
 
 ---
 
@@ -935,7 +984,7 @@ Fitur Notifikasi in-app penurunan harga, Statistik bermain interaktif berbasis g
 
 ## 🧪 Hasil Pengujian Otomatis Mobile Terkini
 - **Flutter Analyzer**: `flutter analyze` -> **No issues found!** (0 error, 0 warning, 0 hint).
-- **Flutter Unit & Widget Tests**: `flutter test` -> **All 45 tests passed!** (100% lulus).
+- **Flutter Unit & Widget Tests**: `flutter test` -> **All 47 tests passed!** (100% lulus), termasuk 2 tes Fase 4 untuk truncation badge dan reduce-motion tombol.
 
 ---
 

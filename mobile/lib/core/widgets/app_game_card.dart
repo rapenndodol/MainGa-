@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../features/games/data/models/game_model.dart';
 import '../../features/games/presentation/screens/game_detail_screen.dart';
 import '../theme/app_theme.dart';
@@ -86,10 +87,7 @@ class _AppGameCardState extends State<AppGameCard>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => GameDetailScreen(
-          game: widget.game,
-          heroTag: _heroTag,
-        ),
+        builder: (_) => GameDetailScreen(game: widget.game, heroTag: _heroTag),
       ),
     );
   }
@@ -103,8 +101,8 @@ class _AppGameCardState extends State<AppGameCard>
         child: Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
           child: AnimatedScale(
-            scale: _pressed ? 0.985 : 1.0,
-            duration: AppMotion.fast,
+            scale: _pressed && !_reduceMotion ? 0.985 : 1.0,
+            duration: _reduceMotion ? Duration.zero : AppMotion.fast,
             curve: AppMotion.curve,
             child: Material(
               color: _pressed ? AppColors.surface : AppColors.transparent,
@@ -112,8 +110,7 @@ class _AppGameCardState extends State<AppGameCard>
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 borderRadius: AppRadius.lgBorderRadius,
-                onHighlightChanged: (value) =>
-                    setState(() => _pressed = value),
+                onHighlightChanged: (value) => setState(() => _pressed = value),
                 onTap: _openDetail,
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.sm),
@@ -209,9 +206,10 @@ class _AppGameCardState extends State<AppGameCard>
                                         _firstPlatform,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: AppTypography.labelSmall.copyWith(
-                                          color: AppColors.textMuted,
-                                        ),
+                                        style: AppTypography.labelSmall
+                                            .copyWith(
+                                              color: AppColors.textMuted,
+                                            ),
                                       ),
                                     ),
                                   ],
