@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 
-/// Atribusi resmi RAWG.io dengan gaya warm obsidian dan tautan aktif.
+/// Atribusi resmi RAWG.io dengan gaya netral dan tautan aktif.
+/// Area sentuh dipertahankan minimal 48dp.
 class AppRawgAttribution extends StatelessWidget {
   final EdgeInsetsGeometry padding;
 
@@ -25,44 +26,56 @@ class AppRawgAttribution extends StatelessWidget {
     return Padding(
       padding: padding,
       child: Center(
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: AppRadius.fullBorderRadius,
-            onTap: _launchRawg,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.xs + 2,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceElevated,
-                borderRadius: AppRadius.fullBorderRadius,
-                border: Border.all(color: AppColors.border, width: 1),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Data by ',
-                    style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted),
+        child: Semantics(
+          link: true,
+          label: 'Data by RAWG.io',
+          excludeSemantics: true,
+          child: Material(
+            color: AppColors.transparent,
+            child: InkWell(
+              borderRadius: AppRadius.fullBorderRadius,
+              onTap: _launchRawg,
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 48),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated,
+                  borderRadius: AppRadius.fullBorderRadius,
+                  border: Border.all(
+                    color: AppColors.border.withValues(alpha: 0.7),
+                    width: 1,
                   ),
-                  Text(
-                    'RAWG.io',
-                    style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.primaryLight,
-                      fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.underline,
-                      decorationColor: AppColors.primaryLight.withValues(alpha: 0.5),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Data by ',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  const Icon(
-                    Icons.open_in_new_rounded,
-                    size: 12,
-                    color: AppColors.primaryLight,
-                  ),
-                ],
+                    Text(
+                      'RAWG.io',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.underline,
+                        decorationColor:
+                            AppColors.textSecondary.withValues(alpha: 0.65),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    const Icon(
+                      Icons.open_in_new_rounded,
+                      size: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_theme.dart';
 
 enum AppBadgeVariant { neutral, primary, secondary, warning, success, error }
@@ -48,14 +49,14 @@ class AppBadge extends StatelessWidget {
           borderColor = AppColors.border;
           break;
         case AppBadgeVariant.primary:
-          textColor = AppColors.primary;
-          bgColor = AppColors.primary.withValues(alpha: 0.16);
-          borderColor = AppColors.primary.withValues(alpha: 0.4);
+          textColor = AppColors.onPrimary;
+          bgColor = AppColors.primary;
+          borderColor = AppColors.primary;
           break;
         case AppBadgeVariant.secondary:
-          textColor = AppColors.secondary;
-          bgColor = AppColors.secondary.withValues(alpha: 0.15);
-          borderColor = AppColors.secondary.withValues(alpha: 0.35);
+          textColor = AppColors.textPrimary;
+          bgColor = AppColors.surfaceElevated;
+          borderColor = AppColors.border;
           break;
         case AppBadgeVariant.warning:
           textColor = AppColors.ratingStar;
@@ -85,22 +86,37 @@ class AppBadge extends StatelessWidget {
         borderRadius: AppRadius.fullBorderRadius,
         border: Border.all(color: borderColor, width: 1),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: compact ? 12 : 14, color: textColor),
-            const SizedBox(width: AppSpacing.xs),
-          ],
-          Text(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final Widget labelWidget = Text(
             label,
-            style: AppTypography.labelSmall.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-              fontSize: compact ? 11 : 12,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.tabular(
+              AppTypography.labelSmall.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+                fontSize: compact ? 11 : 12,
+              ),
             ),
-          ),
-        ],
+          );
+
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: compact ? 12 : 14, color: textColor),
+                const SizedBox(width: AppSpacing.xs),
+              ],
+              // Label dipangkas hanya saat badge mendapat lebar terbatas,
+              // mis. di dalam Wrap metadata detail game.
+              if (constraints.hasBoundedWidth)
+                Flexible(child: labelWidget)
+              else
+                labelWidget,
+            ],
+          );
+        },
       ),
     );
   }

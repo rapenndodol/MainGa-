@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
 import '../theme/app_theme.dart';
 
 enum AppButtonVariant { primary, secondary, outline, destructive, ghost }
 
-/// Tombol bersama bergaya Pill modern sesuai referensi visual.
-class AppButton extends StatelessWidget {
+/// Tombol bersama bergaya pill dengan umpan balik tekan yang halus.
+class AppButton extends StatefulWidget {
   final String text;
   final VoidCallback? onPressed;
   final bool isLoading;
@@ -29,15 +31,22 @@ class AppButton extends StatelessWidget {
   });
 
   @override
+  State<AppButton> createState() => _AppButtonState();
+}
+
+class _AppButtonState extends State<AppButton> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     Color backgroundColor;
     Color foregroundColor;
     BorderSide? side;
 
-    switch (variant) {
+    switch (widget.variant) {
       case AppButtonVariant.primary:
         backgroundColor = AppColors.primary;
-        foregroundColor = Colors.white;
+        foregroundColor = AppColors.onPrimary;
         break;
       case AppButtonVariant.secondary:
         backgroundColor = AppColors.surfaceElevated;
@@ -45,74 +54,127 @@ class AppButton extends StatelessWidget {
         side = const BorderSide(color: AppColors.border, width: 1);
         break;
       case AppButtonVariant.outline:
-        backgroundColor = Colors.transparent;
+        backgroundColor = AppColors.transparent;
         foregroundColor = AppColors.textPrimary;
         side = const BorderSide(color: AppColors.border, width: 1.2);
         break;
       case AppButtonVariant.destructive:
         backgroundColor = AppColors.error.withValues(alpha: 0.15);
         foregroundColor = AppColors.error;
-        side = BorderSide(color: AppColors.error.withValues(alpha: 0.4), width: 1);
+        side = BorderSide(
+          color: AppColors.error.withValues(alpha: 0.4),
+          width: 1,
+        );
         break;
       case AppButtonVariant.ghost:
-        backgroundColor = Colors.transparent;
-        foregroundColor = AppColors.primaryLight;
+        backgroundColor = AppColors.transparent;
+        foregroundColor = AppColors.textPrimary;
         break;
     }
 
-    final bool isDisabled = onPressed == null || isLoading;
+    final bool isDisabled = widget.onPressed == null;
+    final bool isBusy = isDisabled || widget.isLoading;
+    final bool reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
-    return SizedBox(
-      width: width,
-      height: height,
-      child: Material(
-        color: isDisabled ? backgroundColor.withValues(alpha: 0.45) : backgroundColor,
-        borderRadius: AppRadius.fullBorderRadius,
-        child: InkWell(
-          borderRadius: AppRadius.fullBorderRadius,
-          onTap: isDisabled ? null : onPressed,
-          child: Container(
-            padding: padding ?? const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-            decoration: BoxDecoration(
+    return Semantics(
+      button: true,
+      enabled: !isDisabled,
+      value: widget.isLoading ? 'Memuat' : null,
+      child: SizedBox(
+        width: widget.width,
+        height: widget.height,
+        child: AnimatedScale(
+          scale: _pressed && !isBusy && !reduceMotion ? 0.98 : 1.0,
+          duration: reduceMotion ? Duration.zero : AppMotion.fast,
+          curve: AppMotion.curve,
+          child: Material(
+            color: isDisabled
+                ? backgroundColor.withValues(alpha: 0.45)
+                : backgroundColor,
+            borderRadius: AppRadius.fullBorderRadius,
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
               borderRadius: AppRadius.fullBorderRadius,
-              border: side != null
-                  ? Border.fromBorderSide(
-                      isDisabled ? side.copyWith(color: side.color.withValues(alpha: 0.4)) : side,
-                    )
-                  : null,
-            ),
-            alignment: Alignment.center,
-            child: isLoading
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.2,
-                      valueColor: AlwaysStoppedAnimation<Color>(foregroundColor),
-                    ),
-                  )
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (icon != null) ...[
-                        Icon(icon, size: 18, color: foregroundColor),
-                        const SizedBox(width: AppSpacing.sm),
-                      ],
-                      Text(
-                        text,
-                        style: AppTypography.labelLarge.copyWith(
-                          color: isDisabled
-                              ? foregroundColor.withValues(alpha: 0.5)
-                              : foregroundColor,
+              onHighlightChanged: (value) {
+                if (isBusy) return;
+                setState(() => _pressed = value);
+              },
+              onTap: isBusy
+                  ? null
+                  : () {
+                      HapticFeedback.lightImpact();
+                      widget.onPressed!();
+                    },
+              child: Container(
+                padding:
+                    widget.padding ??
+                    const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                decoration: BoxDecoration(
+                  borderRadius: AppRadius.fullBorderRadius,
+                  border: side != null
+                      ? Border.fromBorderSide(
+                          isDisabled
+                              ? side.copyWith(
+                                  color: side.color.withValues(alpha: 0.4),
+                                )
+                              : side,
+                        )
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: widget.isLoading
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            foregroundColor,
+                          ),
                         ),
+                      )
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          final Widget label = Text(
+                            widget.text,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.labelLarge.copyWith(
+                              color: isDisabled
+                                  ? foregroundColor.withValues(alpha: 0.5)
+                                  : foregroundColor,
+                            ),
+                          );
+
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (widget.icon != null) ...[
+                                Icon(
+                                  widget.icon,
+                                  size: 18,
+                                  color: foregroundColor,
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                              ],
+                              // Label dipangkas dengan ellipsis hanya saat lebar
+                              // tombol terbatas, mis. di dalam sheet atau dialog.
+                              if (constraints.hasBoundedWidth)
+                                Flexible(child: label)
+                              else
+                                label,
+                              if (widget.trailingIcon != null) ...[
+                                const SizedBox(width: AppSpacing.sm),
+                                widget.trailingIcon!,
+                              ],
+                            ],
+                          );
+                        },
                       ),
-                      if (trailingIcon != null) ...[
-                        const SizedBox(width: AppSpacing.sm),
-                        trailingIcon!,
-                      ],
-                    ],
-                  ),
+              ),
+            ),
           ),
         ),
       ),

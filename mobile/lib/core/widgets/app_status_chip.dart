@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_theme.dart';
 
 /// Helper mapping status game koleksi ke warna dan ikon tema baru
@@ -67,9 +68,12 @@ class AppStatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = AppStatusHelper.getStatusColor(status);
     final icon = AppStatusHelper.getStatusIcon(status);
+    final bool reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
     final content = AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
+      duration: reduceMotion ? Duration.zero : AppMotion.base,
+      curve: AppMotion.curve,
       padding: EdgeInsets.symmetric(
         horizontal: compact ? AppSpacing.sm : AppSpacing.md,
         vertical: compact ? AppSpacing.xs : AppSpacing.xs + 3,
@@ -84,32 +88,49 @@ class AppStatusChip extends StatelessWidget {
           width: isSelected ? 1.5 : 1,
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: compact ? 12 : 14,
-            color: color,
-          ),
-          const SizedBox(width: AppSpacing.xs + 1),
-          Text(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final Widget label = Text(
             status,
-            style: AppTypography.labelSmall.copyWith(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: compact ? 11 : 12,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.tabular(
+              AppTypography.labelSmall.copyWith(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: compact ? 11 : 12,
+              ),
             ),
-          ),
-        ],
+          );
+
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: compact ? 12 : 14, color: color),
+              const SizedBox(width: AppSpacing.xs + 1),
+              // Di dalam kartu sempit label dipangkas agar chip tidak meluber.
+              if (constraints.hasBoundedWidth)
+                Flexible(child: label)
+              else
+                label,
+            ],
+          );
+        },
       ),
     );
 
     if (onTap != null) {
-      return InkWell(
-        borderRadius: AppRadius.fullBorderRadius,
-        onTap: onTap,
-        child: content,
+      return Semantics(
+        button: true,
+        selected: isSelected,
+        child: InkWell(
+          borderRadius: AppRadius.fullBorderRadius,
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Center(widthFactor: 1, child: content),
+          ),
+        ),
       );
     }
 

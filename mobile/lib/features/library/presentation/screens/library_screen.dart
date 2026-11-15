@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_error_state.dart';
+import '../../../../core/widgets/app_filter_chip_bar.dart';
 import '../../../../core/widgets/app_loading_skeleton.dart';
-import '../../../../core/widgets/app_status_chip.dart';
+import '../../../../core/widgets/app_screen_header.dart';
 import '../../data/datasources/library_remote_data_source.dart';
 import '../../data/models/library_entry_model.dart';
 import '../controllers/library_notifier.dart';
@@ -140,102 +143,46 @@ class _LibraryScreenState extends State<LibraryScreen> {
     _fetchLibrary(refresh: true);
   }
 
+  String get _subtitle {
+    if (_isLoading) return 'Menyusun koleksimu...';
+    if (_selectedStatus != 'Semua') {
+      return '$_total game berstatus $_selectedStatus.';
+    }
+    if (_total > 0) {
+      return '$_total game tersimpan · pantau progres mainmu.';
+    }
+    return 'Koleksi, backlog, dan progres mainmu dalam satu tempat.';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        title: Text(
-          'Library Koleksi',
-          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.bold),
-        ),
-        centerTitle: false,
-        automaticallyImplyLeading: false,
-        backgroundColor: AppColors.bg,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        actions: [
-          // ── Tombol "Acak" yang Jelas Terlihat (US-08) ─────────────
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpacing.sm),
-            child: Center(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: AppRadius.fullBorderRadius,
-                  onTap: () => RandomGameSheet.show(context),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.xs + 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryContainer,
-                      borderRadius: AppRadius.fullBorderRadius,
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.6),
-                        width: 1.2,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.casino_rounded,
-                          color: AppColors.primaryLight,
-                          size: 16,
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
-                        Text(
-                          'Acak',
-                          style: AppTypography.labelSmall.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryLight,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Badge Total Game
-          if (!_isLoading && _total > 0)
-            Padding(
-              padding: const EdgeInsets.only(right: AppSpacing.lg),
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.xs + 1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceElevated,
-                    borderRadius: AppRadius.fullBorderRadius,
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Text(
-                    '$_total game',
-                    style: AppTypography.labelSmall.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
-            // ── Horizontal Filter Chips ────────────────────────
-            _buildStatusFilters(),
-            const SizedBox(height: AppSpacing.sm),
-
-            // ── Main Content Area ──────────────────────────────
+            AppScreenHeader(
+              eyebrow: 'Koleksi pribadi',
+              title: 'Library Koleksi',
+              subtitle: _subtitle,
+              actions: [
+                AppButton(
+                  text: 'Acak',
+                  icon: Icons.casino_rounded,
+                  onPressed: () => RandomGameSheet.show(context),
+                  height: 48,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                  ),
+                ),
+              ],
+              footer: AppFilterChipBar(
+                options: _filterOptions,
+                selected: _selectedStatus,
+                onSelected: _onStatusFilterSelected,
+              ),
+            ),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () => _fetchLibrary(refresh: true),
@@ -250,56 +197,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-  Widget _buildStatusFilters() {
-    return SizedBox(
-      height: 42,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        scrollDirection: Axis.horizontal,
-        itemCount: _filterOptions.length,
-        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-        itemBuilder: (context, index) {
-          final option = _filterOptions[index];
-          final bool isSelected = _selectedStatus == option;
-          final Color badgeColor = option == 'Semua'
-              ? AppColors.primary
-              : AppStatusHelper.getStatusColor(option);
-
-          return ChoiceChip(
-            label: Text(
-              option,
-              style: AppTypography.labelSmall.copyWith(
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? Colors.white : AppColors.textSecondary,
-              ),
-            ),
-            selected: isSelected,
-            onSelected: (_) => _onStatusFilterSelected(option),
-            selectedColor: badgeColor,
-            backgroundColor: AppColors.surfaceElevated,
-            side: BorderSide(
-              color: isSelected ? badgeColor : AppColors.border,
-              width: 1,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: AppRadius.fullBorderRadius,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            showCheckmark: false,
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildBody() {
     if (_isLoading) {
-      return const AppListSkeleton(itemCount: 5);
+      return const AppCardSkeletonList(
+        shape: AppCardSkeletonShape.library,
+        itemCount: 4,
+      );
     }
 
     if (_errorMessage != null) {
       return AppErrorState(
-        title: 'Gagal Memuat Library',
+        title: 'Gagal memuat library',
         message: _errorMessage!,
         onRetry: () => _fetchLibrary(refresh: true),
       );
@@ -311,11 +219,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
     return ListView.builder(
       controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
+        AppSpacing.xl,
         AppSpacing.xs,
-        AppSpacing.lg,
-        96.0, // Ruang untuk floating bottom dock
+        AppSpacing.xl,
+        AppSpacing.bottomDock,
       ),
       itemCount: _entries.length + (_isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
@@ -338,6 +247,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         final entry = _entries[index];
         return LibraryGameCard(
           entry: entry,
+          index: index,
           onUpdated: () => _fetchLibrary(refresh: true),
         );
       },

@@ -6,6 +6,7 @@ import '../../../library/presentation/screens/library_screen.dart';
 import '../../../notifications/presentation/controllers/notification_notifier.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
 import '../../../wishlist/presentation/screens/wishlist_screen.dart';
+import '../widgets/floating_nav_bar.dart';
 
 /// Screen utama yang menampung 4 tab dengan Floating Navigation Bar modern.
 class HomeScreen extends StatefulWidget {
@@ -49,105 +50,18 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _currentIndex,
         children: screens,
       ),
-      bottomNavigationBar: _buildFloatingNavBar(),
-    );
-  }
-
-  Widget _buildFloatingNavBar() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated.withValues(alpha: 0.96),
-        borderRadius: AppRadius.fullBorderRadius,
-        border: Border.all(color: AppColors.border, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(
-            index: 0,
-            icon: Icons.explore_rounded,
-            label: 'Jelajah',
-          ),
-          _buildNavItem(
-            index: 1,
-            icon: Icons.collections_bookmark_rounded,
-            label: 'Library',
-          ),
-          _buildNavItem(
-            index: 2,
-            icon: Icons.favorite_rounded,
-            label: 'Wishlist',
-          ),
-          _buildNavItem(
-            index: 3,
-            icon: Icons.person_rounded,
-            label: 'Profil',
-          ),
-        ],
+      bottomNavigationBar: FloatingNavBar(
+        currentIndex: _currentIndex,
+        onSelected: _selectTab,
       ),
     );
   }
 
-  Widget _buildNavItem({
-    required int index,
-    required IconData icon,
-    required String label,
-  }) {
-    final bool isSelected = _currentIndex == index;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: AppRadius.fullBorderRadius,
-        onTap: () {
-          setState(() {
-            _currentIndex = index;
-          });
-          // Saat tab Profil ditampilkan, sinkronkan badge notifikasi
-          if (index == 3) {
-            NotificationNotifier.instance.fetchUnreadCount();
-          }
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          padding: EdgeInsets.symmetric(
-            horizontal: isSelected ? AppSpacing.md : AppSpacing.sm + 2,
-            vertical: AppSpacing.xs + 2,
-          ),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary : Colors.transparent,
-            borderRadius: AppRadius.fullBorderRadius,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                color: isSelected ? Colors.white : AppColors.textMuted,
-                size: 20,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                label,
-                style: AppTypography.labelSmall.copyWith(
-                  fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  color: isSelected ? Colors.white : AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  void _selectTab(int index) {
+    setState(() => _currentIndex = index);
+    // Saat tab Profil ditampilkan, sinkronkan badge notifikasi
+    if (index == 3) {
+      NotificationNotifier.instance.fetchUnreadCount();
+    }
   }
 }

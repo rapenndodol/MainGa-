@@ -1,18 +1,18 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/app_badge.dart';
 import '../../../../core/widgets/app_loading_skeleton.dart';
+import '../../../../core/widgets/app_section_header.dart';
 import '../../data/datasources/wishlist_remote_data_source.dart';
 import '../../data/models/game_price_model.dart';
 
 class PriceTrackerSection extends StatefulWidget {
   final int gameIdOrRawgId;
 
-  const PriceTrackerSection({
-    super.key,
-    required this.gameIdOrRawgId,
-  });
+  const PriceTrackerSection({super.key, required this.gameIdOrRawgId});
 
   @override
   State<PriceTrackerSection> createState() => _PriceTrackerSectionState();
@@ -90,16 +90,17 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return _buildLoadingSkeleton();
+      return _buildLoadingState();
     }
 
-    if (_errorMessage != null && (_pricesData == null || !_pricesData!.hargaTersedia)) {
-      return _buildUnavailableContainer();
+    if (_errorMessage != null &&
+        (_pricesData == null || !_pricesData!.hargaTersedia)) {
+      return _buildUnavailableState();
     }
 
     final data = _pricesData;
     if (data == null || !data.hargaTersedia || data.hargaTerkini.isEmpty) {
-      return _buildUnavailableContainer();
+      return _buildUnavailableState();
     }
 
     // Pastikan harga terkini diurutkan dari yang termurah
@@ -110,49 +111,71 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // ── Header Bagian Harga ───────────────────────────────
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Harga',
-              style: AppTypography.titleMedium.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            if (data.tokoTermurah != null)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.15),
-                  borderRadius: AppRadius.fullBorderRadius,
-                  border: Border.all(
-                    color: AppColors.success.withValues(alpha: 0.4),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.savings_outlined,
-                      size: 13,
-                      color: AppColors.success,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Termurah di ${data.tokoTermurah}',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.success,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
+        const AppSectionHeader(
+          title: 'Harga',
+          trailing: AppBadge(
+            label: 'USD',
+            variant: AppBadgeVariant.neutral,
+            compact: true,
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
+
+        // ── Ringkasan Toko Termurah ───────────────────────────
+        if (data.tokoTermurah != null)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: AppColors.success.withValues(alpha: 0.09),
+              borderRadius: AppRadius.mdBorderRadius,
+              border: Border.all(
+                color: AppColors.success.withValues(alpha: 0.32),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.16),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.savings_outlined,
+                    size: 16,
+                    color: AppColors.success,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm + 2),
+                Expanded(
+                  child: Text(
+                    'Termurah di ${data.tokoTermurah}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+                if (data.hargaTerendah != null) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    '\$${data.hargaTerendah!.toStringAsFixed(2)}',
+                    style: AppTypography.titleSmall.copyWith(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        if (data.tokoTermurah != null)
+          const SizedBox(height: AppSpacing.sm + 2),
 
         // ── Daftar Harga per Toko ──────────────────────────────
         ListView.separated(
@@ -204,45 +227,21 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                item.toko,
-                                style: AppTypography.titleSmall.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textPrimary,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (isCheapest) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 1.5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.success.withValues(alpha: 0.2),
-                                  borderRadius: AppRadius.smBorderRadius,
-                                ),
-                                child: Text(
-                                  'Termurah',
-                                  style: AppTypography.labelSmall.copyWith(
-                                    color: AppColors.success,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
+                        Text(
+                          item.toko,
+                          style: AppTypography.labelMedium.copyWith(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12.5,
+                            color: AppColors.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Dicek: ${_formatDate(item.dicekPada, item.dicekPadaRaw)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: AppTypography.bodySmall.copyWith(
                             color: AppColors.textMuted,
                             fontSize: 11,
@@ -270,7 +269,9 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
                                 color: AppColors.primaryContainer,
                                 borderRadius: AppRadius.smBorderRadius,
                                 border: Border.all(
-                                  color: AppColors.primary.withValues(alpha: 0.4),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.4,
+                                  ),
                                 ),
                               ),
                               child: Text(
@@ -312,11 +313,12 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
         const SizedBox(height: AppSpacing.xl),
 
         // ── Grafik Riwayat Harga (fl_chart) ───────────────────
-        Text(
-          'Riwayat Harga',
-          style: AppTypography.titleSmall.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppColors.textSecondary,
+        const AppSectionHeader(
+          title: 'Riwayat Harga',
+          trailing: AppBadge(
+            label: 'USD',
+            variant: AppBadgeVariant.neutral,
+            compact: true,
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -418,7 +420,8 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
     if (maxPrice == 0) maxPrice = 10;
 
     final double paddingY = (maxPrice - minPrice) * 0.2;
-    final double computedMinY = (minPrice - (paddingY > 1 ? paddingY : 1)).clamp(0.0, double.infinity);
+    final double computedMinY = (minPrice - (paddingY > 1 ? paddingY : 1))
+        .clamp(0.0, double.infinity);
     final double computedMaxY = maxPrice + (paddingY > 1 ? paddingY : 2);
 
     return Container(
@@ -443,15 +446,22 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
-            horizontalInterval: ((computedMaxY - computedMinY) / 4).clamp(1.0, 100.0),
+            horizontalInterval: ((computedMaxY - computedMinY) / 4).clamp(
+              1.0,
+              100.0,
+            ),
             getDrawingHorizontalLine: (value) => FlLine(
               color: AppColors.border.withValues(alpha: 0.5),
               strokeWidth: 1,
             ),
           ),
           titlesData: FlTitlesData(
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
@@ -475,7 +485,9 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 26,
-                interval: (spots.length > 5 ? (spots.length / 4).floorToDouble() : 1),
+                interval: (spots.length > 5
+                    ? (spots.length / 4).floorToDouble()
+                    : 1),
                 getTitlesWidget: (value, meta) {
                   final index = value.toInt();
                   if (index >= 0 && index < sortedHistory.length) {
@@ -557,6 +569,24 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
     );
   }
 
+  Widget _buildUnavailableState() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const AppSectionHeader(
+          title: 'Harga',
+          trailing: AppBadge(
+            label: 'USD',
+            variant: AppBadgeVariant.neutral,
+            compact: true,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _buildUnavailableContainer(),
+      ],
+    );
+  }
+
   Widget _buildUnavailableContainer() {
     return Container(
       width: double.infinity,
@@ -612,17 +642,26 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
     );
   }
 
-  Widget _buildLoadingSkeleton() {
+  Widget _buildLoadingState() {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppSkeletonBox(width: 140, height: 18),
+        AppSectionHeader(
+          title: 'Harga',
+          trailing: AppBadge(
+            label: 'USD',
+            variant: AppBadgeVariant.neutral,
+            compact: true,
+          ),
+        ),
         SizedBox(height: AppSpacing.md),
-        AppSkeletonBox(width: double.infinity, height: 60),
+        AppSkeletonBox(width: double.infinity, height: 58),
         SizedBox(height: AppSpacing.sm),
-        AppSkeletonBox(width: double.infinity, height: 60),
-        SizedBox(height: AppSpacing.lg),
-        AppSkeletonBox(width: 120, height: 16),
+        AppSkeletonBox(width: double.infinity, height: 68),
+        SizedBox(height: AppSpacing.sm),
+        AppSkeletonBox(width: double.infinity, height: 68),
+        SizedBox(height: AppSpacing.xl),
+        AppSectionHeader(title: 'Riwayat Harga'),
         SizedBox(height: AppSpacing.sm),
         AppSkeletonBox(width: double.infinity, height: 180),
       ],
