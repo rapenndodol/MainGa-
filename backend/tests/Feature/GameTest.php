@@ -238,6 +238,7 @@ class GameTest extends TestCase
             'tanggal_rilis' => '2011-04-18',
             'deskripsi'     => null, // belum ada deskripsi
             'cached_at'     => now(),
+            'price_checked_at' => now(),
         ]);
 
         Http::fake([

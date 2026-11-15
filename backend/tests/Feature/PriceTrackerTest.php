@@ -409,6 +409,8 @@ class PriceTrackerTest extends TestCase
      */
     public function test_get_game_prices_endpoint_returns_current_and_chronological_history(): void
     {
+        $this->game1->update(['price_checked_at' => now()]);
+
         PriceHistory::create([
             'game_id'       => $this->game1->id,
             'toko'          => 'Steam',

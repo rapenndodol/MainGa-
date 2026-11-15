@@ -79,6 +79,14 @@ class RawgService
     }
 
     /**
+     * Ambil daftar toko untuk suatu game dari RAWG API berdasarkan rawg_id
+     */
+    public function getGameStores(int $rawgId): ?array
+    {
+        return $this->request("/games/{$rawgId}/stores");
+    }
+
+    /**
      * Helper request internal dengan timeout dan error handling aman
      */
     protected function request(string $endpoint, array $queryParams = []): ?array

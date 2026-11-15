@@ -16,6 +16,8 @@ class Game extends Model
     protected $fillable = [
         'rawg_id',
         'cheapshark_id',
+        'price_checked_at',
+        'steam_app_id',
         'judul',
         'cover_url',
         'rating',
@@ -31,6 +33,7 @@ class Game extends Model
             'rating' => 'float',
             'tanggal_rilis' => 'date',
             'cached_at' => 'datetime',
+            'price_checked_at' => 'datetime',
         ];
     }
 

@@ -43,7 +43,7 @@ return [
 
     'cheapshark' => [
         'base_url' => env('CHEAPSHARK_BASE_URL', 'https://www.cheapshark.com/api/1.0'),
-        'timeout' => (int) env('CHEAPSHARK_TIMEOUT', 10),
+        'timeout' => (int) env('CHEAPSHARK_TIMEOUT', 5),
         'user_agent' => env('CHEAPSHARK_USER_AGENT', 'MainGa/1.0 (support@mainga.app)'),
     ],
 

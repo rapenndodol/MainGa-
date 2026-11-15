@@ -17,6 +17,7 @@ class GameModel {
   final bool inWishlist;
   final String? wishlistStatus;
   final Map<String, dynamic>? wishlistAlertData;
+  final String? priceStatus;
   final bool hargaTersedia;
   final String? statusHarga;
   final double? hargaTerendah;
@@ -42,6 +43,7 @@ class GameModel {
     this.inWishlist = false,
     this.wishlistStatus,
     this.wishlistAlertData,
+    this.priceStatus,
     this.hargaTersedia = false,
     this.statusHarga,
     this.hargaTerendah,
@@ -143,6 +145,7 @@ class GameModel {
       wishlistAlertData: json['wishlist_alert'] is Map<String, dynamic>
           ? json['wishlist_alert'] as Map<String, dynamic>
           : null,
+      priceStatus: json['price_status']?.toString(),
       hargaTersedia: priceAvail,
       statusHarga: json['status_harga']?.toString(),
       hargaTerendah: lowestPrice,
@@ -171,6 +174,7 @@ class GameModel {
       'in_wishlist': inWishlist,
       'wishlist_status': wishlistStatus,
       'wishlist_alert': wishlistAlertData,
+      'price_status': priceStatus,
       'harga_tersedia': hargaTersedia,
       'status_harga': statusHarga,
       'harga_terendah': hargaTerendah,
@@ -200,6 +204,7 @@ class GameModel {
     String? wishlistStatus,
     Map<String, dynamic>? wishlistAlertData,
     bool clearWishlistStatus = false,
+    String? priceStatus,
     bool? hargaTersedia,
     String? statusHarga,
     double? hargaTerendah,
@@ -225,6 +230,7 @@ class GameModel {
       inWishlist: clearWishlistStatus ? false : (inWishlist ?? this.inWishlist),
       wishlistStatus: clearWishlistStatus ? null : (wishlistStatus ?? this.wishlistStatus),
       wishlistAlertData: clearWishlistStatus ? null : (wishlistAlertData ?? this.wishlistAlertData),
+      priceStatus: priceStatus ?? this.priceStatus,
       hargaTersedia: hargaTersedia ?? this.hargaTersedia,
       statusHarga: statusHarga ?? this.statusHarga,
       hargaTerendah: hargaTerendah ?? this.hargaTerendah,

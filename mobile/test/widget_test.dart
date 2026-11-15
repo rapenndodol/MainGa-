@@ -20,7 +20,9 @@ import 'package:mobile/features/library/presentation/widgets/library_status_badg
 import 'package:mobile/features/wishlist/presentation/screens/wishlist_screen.dart';
 import 'package:mobile/features/wishlist/data/models/wishlist_item_model.dart';
 import 'package:mobile/features/wishlist/data/models/wishlist_response_model.dart';
+import 'package:mobile/features/wishlist/data/datasources/wishlist_remote_data_source.dart';
 import 'package:mobile/features/wishlist/data/models/game_price_model.dart';
+import 'package:mobile/features/wishlist/presentation/widgets/price_tracker_section.dart';
 import 'package:mobile/features/wishlist/presentation/widgets/wishlist_game_card.dart';
 import 'package:mobile/features/notifications/data/models/notification_model.dart';
 import 'package:mobile/features/notifications/data/models/notifications_response_model.dart';
@@ -150,6 +152,7 @@ void main() {
         'tanggal_rilis': '2013-09-17',
         'deskripsi': 'An action-adventure game developed by Rockstar Games.',
         'library_status': 'Sedang Dimainkan',
+        'price_status': 'available',
       };
 
       final game = GameModel.fromJson(json);
@@ -163,6 +166,7 @@ void main() {
       expect(game.platforms.length, 2);
       expect(game.deskripsi, contains('Rockstar Games'));
       expect(game.libraryStatus, 'Sedang Dimainkan');
+      expect(game.priceStatus, 'available');
     });
 
     test('GameModel.fromJson parses alasan correctly for recommendations', () {
@@ -394,6 +398,7 @@ void main() {
         'success': true,
         'message': 'Data harga game berhasil diambil',
         'data': {
+          'price_status': 'available',
           'harga_tersedia': true,
           'status_keterangan': 'Harga tersedia',
           'harga_terendah': 19.99,
@@ -442,6 +447,7 @@ void main() {
       final res = GamePricesResponseModel.fromJson(json);
 
       expect(res.success, true);
+      expect(res.priceStatus, 'available');
       expect(res.hargaTersedia, true);
       expect(res.tokoTermurah, 'Epic Games Store');
       expect(res.hargaTerendah, 19.99);
@@ -1109,6 +1115,26 @@ void main() {
       expect(find.text('4.8'), findsOneWidget);
       expect(find.text('Tentang Game'), findsOneWidget);
     });
+
+    testWidgets('PriceTrackerSection displays unsupported/not_found message', (WidgetTester tester) async {
+      final fakeDataSource = _FakeUnavailablePriceDataSource(status: 'not_found');
+
+      await tester.pumpWidget(
+        TestWrapper(
+          child: PriceTrackerSection(
+            gameIdOrRawgId: 999,
+            dataSource: fakeDataSource,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Harga belum tersedia'), findsOneWidget);
+      expect(
+        find.text('Game ini tidak tersedia di toko PC yang dipantau CheapShark'),
+        findsOneWidget,
+      );
+    });
   });
 
   group('Palette & Theme System Tests (60-30-10)', () {
@@ -1186,4 +1212,23 @@ void main() {
       expect(text.style?.color, AppColors.onPrimary);
     });
   });
+}
+
+class _FakeUnavailablePriceDataSource extends WishlistRemoteDataSource {
+  final String status;
+
+  _FakeUnavailablePriceDataSource({required this.status});
+
+  @override
+  Future<GamePricesResponseModel> fetchGamePrices(int gameIdOrRawgId) async {
+    return GamePricesResponseModel(
+      success: true,
+      message: 'Harga belum tersedia untuk game ini',
+      priceStatus: status,
+      hargaTersedia: false,
+      statusKeterangan: 'Harga belum tersedia',
+      hargaTerkini: [],
+      riwayatHarga: [],
+    );
+  }
 }

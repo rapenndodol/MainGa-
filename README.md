@@ -597,7 +597,7 @@ flutter analyze
 flutter test
 flutter run
 ```
-*Hasil pengujian saat ini: `flutter analyze` 0 issues (bersih), dan `flutter test` 47 tests passed (100% lulus).*
+*Hasil pengujian saat ini: `flutter analyze` 0 issues (bersih), dan `flutter test` 48 tests passed (100% lulus).*
 
 ---
 
@@ -677,8 +677,37 @@ Tahap 4 mengimplementasikan backend untuk Wishlist pribadi dengan harga target d
   - `GET /api/wishlist/{id}` : Mengambil detail satu entri wishlist pengguna.
   - `PUT /api/wishlist/{id}` : Mengubah `harga_target` atau status `aktif`.
   - `DELETE /api/wishlist/{id}` : Menghapus game dari wishlist pengguna.
-  - `GET /api/games/{id}/prices` : Mengambil harga terkini per toko dan riwayat harga lengkap dalam urutan waktu kronologis (untuk visualisasi grafik garis).
-  - `GET /api/games/{id}` : Endpoint detail game yang sudah ada diperluas dengan field `in_wishlist`, `wishlist_status`, `wishlist_alert`, serta daftar harga terkini per toko (`harga_terkini`) dan harga terendah.
+  - `GET /api/games/{id}/prices` : Mengambil harga terkini per toko, riwayat harga lengkap dalam urutan waktu kronologis (untuk visualisasi grafik garis), field `price_status`, dan menjalankan pengecekan on-demand jika riwayat kosong atau pengecekan terakhir > 6 jam.
+  - `GET /api/games/{id}` : Detail game diperluas dengan field `in_wishlist`, `wishlist_status`, `wishlist_alert`, daftar harga terkini per toko (`harga_terkini`), harga terendah, dan field `price_status` (`available`, `not_found`, `unsupported`).
+
+- **Pengecekan Harga On-Demand & Negative Caching**:
+  - Pengecekan harga otomatis dijalankan secara sinkron (timeout 5 detik) saat halaman detail game (`GameController@show`) atau endpoint riwayat harga (`PriceController@gamePrices`) dibuka untuk **seluruh game** di katalog (tidak terbatas pada game wishlist aktif saja).
+  - Scheduler `prices:check`, skema tabel `price_history`, endpoint `/api/games/{id}/prices`, visualisasi grafik harga, dan komponen `PriceTrackerSection` tetap dipertahankan tanpa *breaking change*.
+  - Migration baru (`2026_11_15_000001_add_price_checked_at_and_steam_app_id_to_games_table.php`) menambahkan:
+    - `price_checked_at` (nullable timestamp): mencatat waktu pengecekan harga terakhir.
+    - `steam_app_id` (nullable string): menyimpan Steam App ID game.
+  - Aturan Cache Pengecekan:
+    - Jika game memiliki riwayat harga, pengecekan baru hanya dipicu jika pengecekan terakhir > 6 jam yang lalu.
+    - *Negative Cache* 24 Jam: Bila game tidak ditemukan di CheapShark, `price_checked_at` tetap dicatat dan CheapShark tidak akan dihubungi kembali dalam 24 jam untuk game tersebut.
+  - Toleransi Kegagalan (*Graceful Degradation*): Jika CheapShark timeout (> 5 detik) atau server down, sistem mengembalikan data terakhir yang ada (atau status belum tersedia) dengan HTTP 200 tanpa error 500.
+
+- **Penyempurnaan Pencocokan Judul & Integrasi Steam App ID**:
+  - Resolusi `steam_app_id` sekali saja dari RAWG API (endpoint `/games/{id}/stores`, mengambil ID dari URL `store.steampowered.com/app/{id}`) lalu disimpan permanen ke tabel `games`.
+  - Jika `steam_app_id` tersedia, pencarian CheapShark mengutamakan `GET /games?steamAppID=` terlebih dahulu.
+  - Normalisasi teks komprehensif:
+    - Huruf kecil (*lowercase*) dan pembersihan tanda baca/simbol.
+    - Angka Romawi ke angka arab (misal `"The Witcher III"` -> `"The Witcher 3"`).
+    - Pembuangan kata edisi penamaan: `edition`, `remastered`, `goty`, `definitive`.
+    - Pembuangan awalan `"the "`.
+  - Strategi pencarian bertingkat: mencoba judul penuh, lalu mencoba judul tanpa subjudul setelah tanda titik dua (`:`) atau strip (`-`).
+  - Ambang batas kecocokan: kandidat dipilih jika kemiripan `similar_text >= 85%` dengan tetap mengutamakan non-DLC.
+
+- **Field `price_status` & Tampilan Pesan Status di Flutter**:
+  - Endpoint mengembalikan status eksplisit:
+    - `available`: harga multi-toko tersedia di CheapShark.
+    - `not_found`: game PC namun tidak ditemukan di toko CheapShark yang dipantau.
+    - `unsupported`: game eksklusif konsol/non-PC yang tidak didukung oleh pemantauan CheapShark.
+  - Flutter `PriceTrackerSection` menampilkan pesan ramah informatif sesuai status: *"Game ini tidak tersedia di toko PC yang dipantau CheapShark"* untuk status `not_found` dan `unsupported`.
 
 - **Aturan Bisnis & Integritas Data**:
   - `harga_target > 0` (validasi ditolak dengan HTTP 422 bila <= 0 atau non-numerik).
@@ -753,7 +782,15 @@ Dijalankan dengan: `php artisan test`
    - ✅ Artisan command `prices:check` hanya memproses wishlist aktif dan menduplikasi query game.
    - ✅ Artisan command `prices:check --game={id}` mengecek 1 game secara manual.
 
-**Total Pengujian Backend**: **49 passed, 248 assertions, 0 failed**.
+3. **OnDemandPriceCheckTest** (`tests/Feature/OnDemandPriceCheckTest.php` — 6 tests):
+   - ✅ Game tanpa riwayat memicu pengecekan sinkron saat halaman detail dibuka dan menyimpan riwayat ke database.
+   - ✅ Negative cache 24 jam mencegah panggilan berulang ke CheapShark jika game tidak ditemukan.
+   - ✅ Timeout / galat CheapShark (batas 5 detik) ditangani secara aman tanpa menimbulkan error 500.
+   - ✅ Pencocokan judul dengan normalisasi angka Romawi ke arab, penghapusan kata edisi/remastered/goty/definitive, pencarian subjudul setelah titik dua atau strip, dan prioritas pencarian via `steam_app_id`.
+   - ✅ Endpoint `GET /api/games/{id}/prices` dan grafik riwayat harga tetap mengembalikan urutan kronologis serta struktur harga utuh.
+   - ✅ Game eksklusif konsol (tanpa platform PC) mengembalikan `price_status = 'unsupported'`.
+
+**Total Pengujian Backend Keseluruhan**: **91 passed, 514 assertions, 0 failed**.
 
 
 ---

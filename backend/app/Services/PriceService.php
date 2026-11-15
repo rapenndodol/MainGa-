@@ -6,6 +6,7 @@ use App\Models\Game;
 use App\Models\Notification;
 use App\Models\PriceHistory;
 use App\Models\WishlistAlert;
+use Carbon\Carbon;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -14,24 +15,32 @@ use Throwable;
 
 class PriceService
 {
+    protected RawgService $rawgService;
     protected string $baseUrl;
     protected int $timeout;
     protected string $userAgent;
 
-    public function __construct()
+    public function __construct(?RawgService $rawgService = null)
     {
+        $this->rawgService = $rawgService ?? app(RawgService::class);
         $this->baseUrl = rtrim((string) config('services.cheapshark.base_url', 'https://www.cheapshark.com/api/1.0'), '/');
-        $this->timeout = (int) config('services.cheapshark.timeout', 10);
+        $this->timeout = (int) config('services.cheapshark.timeout', 5);
         $this->userAgent = (string) config('services.cheapshark.user_agent', 'MainGa/1.0 (support@mainga.app)');
+    }
+
+    public function setTimeout(int $timeout): self
+    {
+        $this->timeout = $timeout;
+        return $this;
     }
 
     /**
      * Inisialisasi HTTP client dengan descriptive User-Agent header (wajib bagi CheapShark API).
      */
-    protected function client(): PendingRequest
+    protected function client(?int $timeout = null): PendingRequest
     {
         return Http::withUserAgent($this->userAgent)
-            ->timeout($this->timeout)
+            ->timeout($timeout ?? $this->timeout)
             ->acceptJson();
     }
 
@@ -73,21 +82,62 @@ class PriceService
     }
 
     /**
+     * Konversi angka Romawi (kata utuh) ke angka arab.
+     */
+    public function convertRomanNumerals(string $text): string
+    {
+        $map = [
+            'xviii' => '18',
+            'xvii'  => '17',
+            'xvi'   => '16',
+            'xv'    => '15',
+            'xiv'   => '14',
+            'xiii'  => '13',
+            'xii'   => '12',
+            'xi'    => '11',
+            'xix'   => '19',
+            'xx'    => '20',
+            'viii'  => '8',
+            'vii'   => '7',
+            'iii'   => '3',
+            'iv'    => '4',
+            'vi'    => '6',
+            'ix'    => '9',
+            'ii'    => '2',
+            'x'     => '10',
+            'v'     => '5',
+            'i'     => '1',
+        ];
+
+        foreach ($map as $roman => $arabic) {
+            $text = (string) preg_replace('/\b' . $roman . '\b/u', $arabic, $text);
+        }
+
+        return $text;
+    }
+
+    /**
      * Normalisasi string judul:
      * - huruf kecil
      * - tanpa tanda baca
      * - tanpa awalan "the"
+     * - angka Romawi ke angka
+     * - buang kata edition/remastered/goty/definitive
      * - spasi diseragamkan
      */
     public function normalizeTitle(string $title): string
     {
         $title = mb_strtolower($title, 'UTF-8');
         // Ganti semua tanda baca dan simbol non-huruf/non-angka dengan spasi
-        $cleaned = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $title);
-        // Rapikan spasi berlebih
-        $cleaned = trim(preg_replace('/\s+/', ' ', (string) $cleaned));
+        $cleaned = (string) preg_replace('/[^\p{L}\p{N}]+/u', ' ', $title);
         // Hapus awalan "the " jika ada
-        return trim((string) preg_replace('/^the\s+/u', '', $cleaned));
+        $cleaned = trim((string) preg_replace('/^the\s+/u', '', $cleaned));
+        // Angka Romawi ke angka arab
+        $cleaned = $this->convertRomanNumerals($cleaned);
+        // Buang kata edition/remastered/goty/definitive
+        $cleaned = (string) preg_replace('/\b(edition|remastered|goty|definitive)\b/u', ' ', $cleaned);
+        // Rapikan spasi berlebih
+        return trim((string) preg_replace('/\s+/u', ' ', $cleaned));
     }
 
     /**
@@ -101,14 +151,15 @@ class PriceService
     /**
      * Pilih hasil pencarian CheapShark yang judulnya paling cocok dengan judul game target.
      * - Utamakan kecocokan persis
-     * - Bila tidak ada, pilih kemiripan tertinggi dan abaikan DLC/bundle/soundtrack/expansion pass bila ada kandidat utama
-     * - Tidak mensyaratkan steamAppID terisi
+     * - Evaluasi kemiripan teks full title dan title tanpa subjudul
+     * - Pilih kandidat dengan similar_text >= 85%
      *
      * @param string $targetTitle
      * @param array $searchResults
+     * @param float $minScore
      * @return array|null
      */
-    public function findBestMatch(string $targetTitle, array $searchResults): ?array
+    public function findBestMatch(string $targetTitle, array $searchResults, float $minScore = 85.0): ?array
     {
         if (empty($searchResults)) {
             return null;
@@ -118,6 +169,10 @@ class PriceService
         if ($normTarget === '') {
             return null;
         }
+
+        $targetParts = preg_split('/[:\-]/', $targetTitle);
+        $targetWithoutSub = trim($targetParts[0] ?? '');
+        $normTargetWithoutSub = $this->normalizeTitle($targetWithoutSub);
 
         // 1. Utamakan kecocokan persis
         foreach ($searchResults as $item) {
@@ -158,22 +213,43 @@ class PriceService
             $candidateTitle = $item['external'] ?? ($item['title'] ?? '');
             $normCandidate = $this->normalizeTitle($candidateTitle);
 
-            // Hitung kemiripan teks
-            similar_text($normTarget, $normCandidate, $percent);
+            $candidateParts = preg_split('/[:\-]/', $candidateTitle);
+            $candidateWithoutSub = trim($candidateParts[0] ?? '');
+            $normCandidateWithoutSub = $this->normalizeTitle($candidateWithoutSub);
+
+            // Hitung skor kemiripan teks berbagai kombinasi
+            similar_text($normTarget, $normCandidate, $simFull);
+
+            $simSub1 = 0.0;
+            if ($normCandidateWithoutSub !== '') {
+                similar_text($normTarget, $normCandidateWithoutSub, $simSub1);
+            }
+
+            $simSub2 = 0.0;
+            if ($normTargetWithoutSub !== '') {
+                similar_text($normTargetWithoutSub, $normCandidate, $simSub2);
+            }
+
+            $simSub3 = 0.0;
+            if ($normTargetWithoutSub !== '' && $normCandidateWithoutSub !== '') {
+                similar_text($normTargetWithoutSub, $normCandidateWithoutSub, $simSub3);
+            }
+
+            $score = max($simFull, $simSub1, $simSub2, $simSub3);
 
             // Bonus jika target adalah bagian dari kandidat atau sebaliknya
             if (str_contains($normCandidate, $normTarget) || str_contains($normTarget, $normCandidate)) {
-                $percent += 15.0;
+                $score = max($score, min(100.0, $simFull + 15.0));
             }
 
-            if ($percent > $highestScore) {
-                $highestScore = $percent;
+            if ($score > $highestScore) {
+                $highestScore = $score;
                 $bestMatch = $item;
             }
         }
 
-        // Ambang batas kemiripan wajar (>= 35.0) atau satu-satunya kandidat
-        if ($bestMatch !== null && ($highestScore >= 35.0 || count($searchResults) === 1)) {
+        // Ambang batas kemiripan: similar_text >= 85%
+        if ($bestMatch !== null && $highestScore >= $minScore) {
             return $bestMatch;
         }
 
@@ -181,7 +257,45 @@ class PriceService
     }
 
     /**
-     * Cari ID game CheapShark berdasarkan judul game dan simpan ke kolom cheapshark_id tabel games.
+     * Ambil steam_app_id sekali saja dari RAWG stores jika belum tersimpan, lalu simpan ke database.
+     */
+    public function resolveSteamAppId(Game $game): ?string
+    {
+        if ($game->steam_app_id !== null) {
+            return $game->steam_app_id !== '' ? (string) $game->steam_app_id : null;
+        }
+
+        if (empty($game->rawg_id)) {
+            return null;
+        }
+
+        try {
+            $storesData = $this->rawgService->getGameStores((int) $game->rawg_id);
+            $foundSteamId = null;
+
+            if ($storesData && !empty($storesData['results']) && is_array($storesData['results'])) {
+                foreach ($storesData['results'] as $store) {
+                    $url = (string) ($store['url'] ?? '');
+                    if (preg_match('#store\.steampowered\.com/app/(\d+)#i', $url, $matches)) {
+                        $foundSteamId = (string) $matches[1];
+                        break;
+                    }
+                }
+            }
+
+            // Simpan ke database: isi ID steam jika ada, atau string kosong jika tidak ada (agar tidak fetch ulang)
+            $game->steam_app_id = $foundSteamId ?? '';
+            $game->save();
+
+            return $foundSteamId;
+        } catch (Throwable $e) {
+            Log::warning("Gagal mengambil store RAWG untuk game '{$game->judul}': " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Cari ID game CheapShark berdasarkan steam_app_id atau judul game dan simpan ke kolom cheapshark_id tabel games.
      */
     public function resolveCheapSharkId(Game $game): ?string
     {
@@ -190,14 +304,76 @@ class PriceService
             return (string) $game->cheapshark_id;
         }
 
+        // 1. Ambil steam_app_id (sekali saja dari RAWG jika belum ada)
+        $steamAppId = $this->resolveSteamAppId($game);
+
+        // 2. Jika steam_app_id tersedia, gunakan GET /games?steamAppID= lebih dulu
+        if (!empty($steamAppId)) {
+            try {
+                $response = $this->client()->get("{$this->baseUrl}/games", [
+                    'steamAppID' => $steamAppId,
+                ]);
+
+                if ($response->successful()) {
+                    $results = $response->json();
+                    if (is_array($results) && !empty($results)) {
+                        $match = $this->findBestMatch($game->judul, $results);
+                        if ($match && isset($match['gameID'])) {
+                            $cheapsharkId = (string) $match['gameID'];
+                            $selectedTitle = $match['external'] ?? ($match['title'] ?? 'Unknown');
+                            Log::info("Pencarian CheapShark via steamAppID ({$steamAppId}) untuk '{$game->judul}': Terpilih '{$selectedTitle}' (ID: {$cheapsharkId}).");
+
+                            $game->cheapshark_id = $cheapsharkId;
+                            $game->save();
+
+                            return $cheapsharkId;
+                        }
+                    }
+                }
+            } catch (Throwable $e) {
+                Log::warning("CheapShark API steamAppID error untuk '{$game->judul}': " . $e->getMessage());
+            }
+        }
+
+        // 3. Coba pencarian dengan judul penuh
+        $match = $this->searchCheapSharkByTitle($game->judul, $game->judul);
+        if ($match && isset($match['gameID'])) {
+            $cheapsharkId = (string) $match['gameID'];
+            $game->cheapshark_id = $cheapsharkId;
+            $game->save();
+            return $cheapsharkId;
+        }
+
+        // 4. Coba pencarian judul tanpa subjudul setelah ":" atau "-"
+        $titleParts = preg_split('/[:\-]/', $game->judul);
+        $titleWithoutSubtitle = trim($titleParts[0] ?? '');
+
+        if ($titleWithoutSubtitle !== '' && $titleWithoutSubtitle !== $game->judul) {
+            $match = $this->searchCheapSharkByTitle($titleWithoutSubtitle, $game->judul);
+            if ($match && isset($match['gameID'])) {
+                $cheapsharkId = (string) $match['gameID'];
+                $game->cheapshark_id = $cheapsharkId;
+                $game->save();
+                return $cheapsharkId;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Helper pencarian CheapShark berdasarkan string judul dan pencocokan terhadap judul target.
+     */
+    protected function searchCheapSharkByTitle(string $searchTitle, string $targetTitle): ?array
+    {
         try {
             $response = $this->client()->get("{$this->baseUrl}/games", [
-                'title' => $game->judul,
+                'title' => $searchTitle,
             ]);
 
             // (a) Respons CheapShark gagal (status bukan 2xx)
             if (! $response->successful()) {
-                Log::warning("CheapShark API gagal untuk judul '{$game->judul}', status: {$response->status()}");
+                Log::warning("CheapShark API gagal untuk judul '{$searchTitle}', status: {$response->status()}");
                 return null;
             }
 
@@ -206,29 +382,24 @@ class PriceService
 
             // (b) Tidak ada kandidat
             if ($count === 0) {
-                Log::info("Pencarian CheapShark untuk '{$game->judul}': 0 kandidat ditemukan (tidak ada kandidat).");
+                Log::info("Pencarian CheapShark untuk '{$searchTitle}': 0 kandidat ditemukan (tidak ada kandidat).");
                 return null;
             }
 
-            $match = $this->findBestMatch($game->judul, $results);
+            $match = $this->findBestMatch($targetTitle, $results);
 
             if ($match && isset($match['gameID'])) {
                 $selectedTitle = $match['external'] ?? ($match['title'] ?? 'Unknown');
                 $cheapsharkId = (string) $match['gameID'];
 
-                Log::info("Pencarian CheapShark untuk '{$game->judul}': {$count} kandidat ditemukan. Terpilih: '{$selectedTitle}' (ID: {$cheapsharkId}).");
-
-                $game->cheapshark_id = $cheapsharkId;
-                $game->save();
-
-                return $cheapsharkId;
+                Log::info("Pencarian CheapShark untuk '{$searchTitle}': {$count} kandidat ditemukan. Terpilih: '{$selectedTitle}' (ID: {$cheapsharkId}).");
+                return $match;
             }
 
-            Log::info("Pencarian CheapShark untuk '{$game->judul}': {$count} kandidat ditemukan, tetapi tidak ada kandidat yang cocok.");
+            Log::info("Pencarian CheapShark untuk '{$searchTitle}': {$count} kandidat ditemukan, tetapi tidak ada kandidat yang cocok.");
             return null;
         } catch (Throwable $e) {
-            // (a) Respons CheapShark timeout / error
-            Log::warning("CheapShark API timeout/error untuk judul '{$game->judul}': " . $e->getMessage());
+            Log::warning("CheapShark API timeout/error untuk judul '{$searchTitle}': " . $e->getMessage());
             return null;
         }
     }
@@ -324,14 +495,83 @@ class PriceService
     }
 
     /**
+     * Cek apakah game perlu diperiksa harganya:
+     * - jika belum pernah punya price_history:
+     *     - bila belum dicek sama sekali -> true
+     *     - bila pernah dicek tapi tidak ditemukan -> negative cache 24 jam
+     * - jika sudah punya price_history:
+     *     - cek apakah pengecekan terakhir > 6 jam yang lalu
+     */
+    public function shouldCheckPrices(Game $game): bool
+    {
+        $hasHistory = $game->priceHistories()->exists();
+
+        if (! $hasHistory) {
+            if ($game->price_checked_at === null) {
+                return true;
+            }
+            // Negative cache 24 jam: jangan panggil CheapShark lagi dalam 24 jam bila tidak ditemukan
+            return Carbon::parse($game->price_checked_at)->addHours(24)->isPast();
+        }
+
+        // Sudah punya price_history: cek apakah pengecekan terakhir > 6 jam yang lalu
+        $lastChecked = $game->price_checked_at
+            ?? $game->priceHistories()->max('dicek_pada');
+
+        if (! $lastChecked) {
+            return true;
+        }
+
+        return Carbon::parse($lastChecked)->addHours(6)->isPast();
+    }
+
+    /**
+     * Jalankan pengecekan harga on-demand secara sinkron dengan timeout 5 detik.
+     */
+    public function checkPricesOnDemand(Game $game, int $timeout = 5): array
+    {
+        if (! $this->shouldCheckPrices($game)) {
+            return [
+                'available'     => false,
+                'cheapshark_id' => $game->cheapshark_id,
+                'deals'         => [],
+                'cheapest'      => null,
+                'cached'        => true,
+            ];
+        }
+
+        $originalTimeout = $this->timeout;
+        $this->timeout = $timeout;
+
+        try {
+            return $this->checkAndRecordPrices($game);
+        } catch (Throwable $e) {
+            Log::warning("On-demand price check gagal untuk game '{$game->judul}': " . $e->getMessage());
+            return [
+                'available'     => false,
+                'cheapshark_id' => $game->cheapshark_id,
+                'deals'         => [],
+                'cheapest'      => null,
+            ];
+        } finally {
+            $this->timeout = $originalTimeout;
+        }
+    }
+
+    /**
      * Jalankan pengecekan harga dan simpan satu baris per toko ke tabel price_history.
      * Mencegah duplikasi jika harga dan toko sama dengan pengecekan sebelumnya dalam jam yang sama.
+     * Mengisi price_checked_at setiap pengecekan (termasuk bila tidak ditemukan).
      *
      * @param Game $game
      * @return array
      */
     public function checkAndRecordPrices(Game $game): array
     {
+        // Catat waktu pengecekan (termasuk saat game tidak ditemukan) untuk negative cache 24 jam
+        $game->price_checked_at = now();
+        $game->save();
+
         $prices = $this->fetchPrices($game);
 
         if ($prices['available'] && !empty($prices['deals'])) {
@@ -370,6 +610,33 @@ class PriceService
         }
 
         return $prices;
+    }
+
+    /**
+     * Tentukan status ketersediaan harga:
+     * - available: harga tersedia di CheapShark
+     * - unsupported: game tidak mendukung platform PC yang dipantau CheapShark
+     * - not_found: game PC namun belum/tidak ditemukan di CheapShark
+     */
+    public function determinePriceStatus(Game $game, bool $hasPrices): string
+    {
+        if ($hasPrices) {
+            return 'available';
+        }
+
+        $game->loadMissing('platforms');
+        if ($game->platforms->isNotEmpty()) {
+            $hasPc = $game->platforms->contains(function ($platform) {
+                $name = strtolower($platform->nama ?? '');
+                return str_contains($name, 'pc') || str_contains($name, 'windows');
+            });
+
+            if (! $hasPc) {
+                return 'unsupported';
+            }
+        }
+
+        return 'not_found';
     }
 
     /**

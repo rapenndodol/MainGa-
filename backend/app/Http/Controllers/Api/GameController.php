@@ -11,6 +11,7 @@ use App\Models\LibraryEntry;
 use App\Models\Platform;
 use App\Models\PriceHistory;
 use App\Models\WishlistAlert;
+use App\Services\PriceService;
 use App\Services\RawgService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -22,10 +23,12 @@ use Throwable;
 class GameController extends Controller
 {
     protected RawgService $rawgService;
+    protected PriceService $priceService;
 
-    public function __construct(RawgService $rawgService)
+    public function __construct(RawgService $rawgService, PriceService $priceService)
     {
         $this->rawgService = $rawgService;
+        $this->priceService = $priceService;
     }
 
     /**
@@ -413,6 +416,9 @@ class GameController extends Controller
                     ->first();
             }
 
+            // On-demand price check jika belum punya history atau pengecekan terakhir > 6 jam
+            $this->priceService->checkPricesOnDemand($game);
+
             // Ambil harga terkini per toko dari price_history
             $rate = (float) config('services.currency.usd_to_idr_rate', 16000);
             $latestPrices = PriceHistory::where('game_id', $game->id)
@@ -436,6 +442,8 @@ class GameController extends Controller
             })->values()->toArray();
 
             $cheapest = $latestPrices->first();
+            $hasPrices = $latestPrices->isNotEmpty();
+            $priceStatus = $this->priceService->determinePriceStatus($game, $hasPrices);
 
             return response()->json([
                 'success' => true,
@@ -464,8 +472,9 @@ class GameController extends Controller
                         'harga_target_idr_estimasi' => (int) round($wishlistAlert->harga_target * $rate),
                         'aktif'                     => (bool) $wishlistAlert->aktif,
                     ] : null,
-                    'harga_tersedia'              => !empty($formattedPrices),
-                    'status_harga'                => !empty($formattedPrices) ? 'Harga tersedia' : 'Harga belum tersedia',
+                    'price_status'                => $priceStatus,
+                    'harga_tersedia'              => $hasPrices,
+                    'status_harga'                => $hasPrices ? 'Harga tersedia' : 'Harga belum tersedia',
                     'harga_terendah'              => $cheapest ? (float) $cheapest->harga : null,
                     'harga_terendah_idr_estimasi' => $cheapest ? (int) round($cheapest->harga * $rate) : null,
                     'toko_termurah'               => $cheapest?->toko,

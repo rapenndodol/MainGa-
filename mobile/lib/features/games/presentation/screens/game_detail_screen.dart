@@ -271,6 +271,7 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
                   // ── Harga & Riwayat Harga (US-05) ──────────────
                   PriceTrackerSection(
                     gameIdOrRawgId: _game.id > 0 ? _game.id : _game.rawgId,
+                    initialPriceStatus: _game.priceStatus,
                   ),
 
                   // ── Game Serupa (F-11) ─────────────────────────

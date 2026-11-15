@@ -64,6 +64,7 @@ class StorePriceItem {
 class GamePricesResponseModel {
   final bool success;
   final String message;
+  final String? priceStatus;
   final bool hargaTersedia;
   final String statusKeterangan;
   final double? hargaTerendah;
@@ -76,6 +77,7 @@ class GamePricesResponseModel {
   const GamePricesResponseModel({
     required this.success,
     required this.message,
+    this.priceStatus,
     required this.hargaTersedia,
     required this.statusKeterangan,
     this.hargaTerendah,
@@ -92,6 +94,7 @@ class GamePricesResponseModel {
 
     bool available = false;
     String status = 'Harga belum tersedia';
+    String? priceStatus;
     double? lowest;
     int? lowestIdr;
     String? cheapestStore;
@@ -102,6 +105,7 @@ class GamePricesResponseModel {
     if (json['data'] is Map<String, dynamic>) {
       final data = json['data'] as Map<String, dynamic>;
 
+      priceStatus = data['price_status']?.toString();
       available = data['harga_tersedia'] is bool
           ? data['harga_tersedia'] as bool
           : (data['harga_tersedia'] == 1 || data['harga_tersedia']?.toString() == 'true');
@@ -146,6 +150,7 @@ class GamePricesResponseModel {
     return GamePricesResponseModel(
       success: success,
       message: message,
+      priceStatus: priceStatus,
       hargaTersedia: available,
       statusKeterangan: status,
       hargaTerendah: lowest,

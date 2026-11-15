@@ -11,15 +11,22 @@ import '../../data/models/game_price_model.dart';
 
 class PriceTrackerSection extends StatefulWidget {
   final int gameIdOrRawgId;
+  final String? initialPriceStatus;
+  final WishlistRemoteDataSource? dataSource;
 
-  const PriceTrackerSection({super.key, required this.gameIdOrRawgId});
+  const PriceTrackerSection({
+    super.key,
+    required this.gameIdOrRawgId,
+    this.initialPriceStatus,
+    this.dataSource,
+  });
 
   @override
   State<PriceTrackerSection> createState() => _PriceTrackerSectionState();
 }
 
 class _PriceTrackerSectionState extends State<PriceTrackerSection> {
-  final _dataSource = WishlistRemoteDataSource();
+  late final WishlistRemoteDataSource _dataSource;
 
   GamePricesResponseModel? _pricesData;
   bool _isLoading = true;
@@ -28,6 +35,7 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
   @override
   void initState() {
     super.initState();
+    _dataSource = widget.dataSource ?? WishlistRemoteDataSource();
     _fetchPrices();
   }
 
@@ -588,6 +596,14 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
   }
 
   Widget _buildUnavailableContainer() {
+    final status = _pricesData?.priceStatus ?? widget.initialPriceStatus;
+    final String description;
+    if (status == 'not_found' || status == 'unsupported') {
+      description = 'Game ini tidak tersedia di toko PC yang dipantau CheapShark';
+    } else {
+      description = 'Data harga multi-toko dari CheapShark belum tersedia untuk game ini.';
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -626,7 +642,7 @@ class _PriceTrackerSectionState extends State<PriceTrackerSection> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Data harga multi-toko dari CheapShark belum tersedia untuk game ini.',
+                      description,
                       style: AppTypography.bodySmall.copyWith(
                         color: AppColors.textMuted,
                         fontSize: 11,

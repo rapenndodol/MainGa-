@@ -5,12 +5,20 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Game;
 use App\Models\PriceHistory;
+use App\Services\PriceService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class PriceController extends Controller
 {
+    protected PriceService $priceService;
+
+    public function __construct(PriceService $priceService)
+    {
+        $this->priceService = $priceService;
+    }
+
     /**
      * GET /api/games/{id}/prices
      * Mengambil harga terkini per toko dan riwayat harga (untuk grafik garis) dalam urutan waktu.
@@ -28,6 +36,9 @@ class PriceController extends Controller
                 'data'    => null,
             ], 404);
         }
+
+        // On-demand price check jika belum punya history atau pengecekan terakhir > 6 jam
+        $this->priceService->checkPricesOnDemand($game);
 
         $rate = (float) config('services.currency.usd_to_idr_rate', 16000);
 
@@ -72,6 +83,7 @@ class PriceController extends Controller
         });
 
         $hasPrices = $latestPrices->isNotEmpty();
+        $priceStatus = $this->priceService->determinePriceStatus($game, $hasPrices);
 
         return response()->json([
             'success' => true,
@@ -83,6 +95,7 @@ class PriceController extends Controller
                     'cheapshark_id' => $game->cheapshark_id,
                     'judul'         => $game->judul,
                 ],
+                'price_status'                => $priceStatus,
                 'harga_tersedia'              => $hasPrices,
                 'status_keterangan'           => $hasPrices ? 'Harga tersedia' : 'Harga belum tersedia',
                 'harga_terendah'              => $cheapest ? (float) $cheapest->harga : null,
