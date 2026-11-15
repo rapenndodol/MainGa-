@@ -737,14 +737,6 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
   }
 
   Widget _buildSimilarGamesSection() {
-    final double textScale = MediaQuery.textScalerOf(context)
-        .scale(1.0)
-        .clamp(1.0, 1.6)
-        .toDouble();
-    // Tinggi carousel bertambah mengikuti text scale agar judul dan genre
-    // di bawah cover tidak terpotong pada 360dp + text scale 1.3.
-    final double carouselHeight = 226 + (textScale - 1.0) * 40;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -758,16 +750,20 @@ class _GameDetailScreenState extends State<GameDetailScreen> {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        SizedBox(
-          height: carouselHeight,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
-            itemCount: _similarGames.length,
-            separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
-            itemBuilder: (context, index) {
-              return _SimilarGameCard(game: _similarGames[index]);
-            },
+        // Tinggi mengikuti isi kartu secara intrinsik agar cover, judul, dan
+        // genre tidak memicu overflow pada text scale berapa pun.
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (int i = 0; i < _similarGames.length; i++) ...[
+                if (i > 0) const SizedBox(width: AppSpacing.md),
+                _SimilarGameCard(game: _similarGames[i]),
+              ],
+            ],
           ),
         ),
       ],
